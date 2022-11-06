@@ -7,13 +7,10 @@ use near_sdk_sim::{
 };
 
 use near_sdk::json_types::U128;
-use sputnik_staking::ContractContract as StakingContract;
 use sputnikdao2::{
     Action, Bounty, Config, ContractContract as DAOContract, OldAccountId, ProposalInput,
     ProposalKind, VersionedPolicy, OLD_BASE_TOKEN,
 };
-use sputnikdao_factory2::SputnikDAOFactoryContract as FactoryContract;
-use test_token::ContractContract as TestTokenContract;
 
 near_sdk_sim::lazy_static_include::lazy_static_include_bytes! {
     FACTORY_WASM_BYTES => "./sputnikdao-factory2/res/sputnikdao_factory2.wasm",
@@ -35,16 +32,6 @@ pub fn should_fail(r: ExecutionResult) {
     }
 }
 
-pub fn setup_factory(root: &UserAccount) -> ContractAccount<FactoryContract> {
-    deploy!(
-        contract: FactoryContract,
-        contract_id: "factory".to_string(),
-        bytes: &FACTORY_WASM_BYTES,
-        signer_account: root,
-        deposit: to_yocto("500"),
-    )
-}
-
 pub fn setup_dao() -> (UserAccount, Contract) {
     let root = init_simulator(None);
     let config = Config {
@@ -61,28 +48,6 @@ pub fn setup_dao() -> (UserAccount, Contract) {
         init_method: new(config, VersionedPolicy::Default(vec![root.account_id.clone()]))
     );
     (root, dao)
-}
-
-pub fn setup_test_token(root: &UserAccount) -> ContractAccount<TestTokenContract> {
-    deploy!(
-        contract: TestTokenContract,
-        contract_id: "test_token".to_string(),
-        bytes: &TEST_TOKEN_WASM_BYTES,
-        signer_account: root,
-        deposit: to_yocto("200"),
-        init_method: new()
-    )
-}
-
-pub fn setup_staking(root: &UserAccount) -> ContractAccount<StakingContract> {
-    deploy!(
-        contract: StakingContract,
-        contract_id: "staking".to_string(),
-        bytes: &STAKING_WASM_BYTES,
-        signer_account: root,
-        deposit: to_yocto("100"),
-        init_method: new("dao".parse().unwrap(), "test_token".parse::<AccountId>().unwrap(), U64(100_000_000_000))
-    )
 }
 
 pub fn add_proposal(

@@ -62,6 +62,36 @@ pub enum Action {
     MoveToHub,
 }
 
+// **TODO** Implement InProgressMetadata here
+pub struct InProgressMetadata {
+    // **TODO** Add fields like `contract`, `image`, `music_folder`, `metadata_json`, `revenue_table`, etc. And `master`/`artist`. 
+    // These fields can be null, because it is possible, that the Artist does not finish uploading these info, and it will be still here, half ready.
+    // When it is ready, it will be possible to mint based on the prepairer-data that is here.
+    // The data that was already made into an NFT, should be deleted.
+}
+
+// **TODO** We should have a big Catalogues obejct, something like this:
+//pub type Catalogues = HashMap<AccountId, Catalogue>; // or this goes to lib.rs
+
+pub type Catalogue = HashMap<UniqId, CatalogueEntry>;
+
+pub struct CatalogueEntry {
+    pub revenue_table: HashMap<AccountId, u64>,     // This is the revenue table that used to be part of the NFT in the FonoRoot contract
+    pub total_income: Balance,                      // This is the amount of money this song made       // Probably this will be moved elsewhere. 
+                                                    // If so, the above is static, this whole object  does not change when buy happens
+    pub current_balance: Balance,                   // Withdrawable balance
+}
+
+// **TODO** If we move `income` from Catalogue, we need another object for that. Should be very similar to Catalogues/Catalogue
+// pub type IncomeTables = HashMap<UniqId, IncomeTable>;
+
+pub struct IncomeTable = {
+    pub total_income: Balance,
+    pub current_balance: Balance
+    // The way it will be payed out is dependent on the CatalogueTable, or on other table, so this is not dependent on User. This is independent, each song has it's own table.
+}
+
+
 impl Action {
     pub fn to_policy_label(&self) -> String {
         format!("{:?}", self)

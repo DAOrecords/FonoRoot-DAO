@@ -113,6 +113,10 @@ pub enum ProposalKind {
     ChangePolicyUpdateDefaultVotePolicy { vote_policy: VotePolicy },
     /// Update the parameters from the policy. This is short cut to updating the whole policy.
     ChangePolicyUpdateParameters { parameters: PolicyParameters },
+    // **TODO** Add MintRoot and the other necesarry functions here
+    MintRoot { params: WeDontKnow },
+    PrepairNft { params: WeDontKnow },
+    UpdatePrepairedNft { params: WeDontKnow }
 }
 
 impl ProposalKind {
@@ -138,6 +142,10 @@ impl ProposalKind {
                 "policy_update_default_vote_policy"
             }
             ProposalKind::ChangePolicyUpdateParameters { .. } => "policy_update_parameters",
+            // **TODO** Add the same functions here as above
+            ProposalKind::MintRoot { .. } => "mint_root",
+            ProposalKind::PrepairNft { .. } => "prepair_nft",
+            ProposalKind::UpdatePrepairedNft { .. } => "update_prepaired_nft"
         }
     }
 }
@@ -407,6 +415,16 @@ impl Contract {
                 self.policy.set(&VersionedPolicy::Current(new_policy));
                 PromiseOrValue::Value(())
             }
+            ProposalKind::MintRoot { params } => {
+                // **TODO** The promise here should do something with the Catalogue
+                _;
+            }
+            ProposalKind::PrepairNft { params } => {
+                _;
+            }
+            ProposalKind::UpdatePrepairedNft { params } => {
+                _;
+            }
         };
         match result {
             PromiseOrValue::Promise(promise) => promise
@@ -557,6 +575,11 @@ impl Contract {
                     matches!(proposal.status, ProposalStatus::InProgress),
                     "ERR_PROPOSAL_NOT_READY_FOR_VOTE"
                 );
+                
+                // **TODO** This is where we would do ValidateContractName
+                // Here we would chech if the given user has the right to mint on that specific contract, or he/she only has the right to mint on another contract.
+                // CheckRoleName("admin_nft.soundsplash.near", "nft.soundsplash.near");
+
                 proposal.update_votes(
                     &sender_id,
                     &roles,

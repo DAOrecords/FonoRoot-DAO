@@ -51,7 +51,7 @@ pub struct Contract {
     pub config: LazyOption<Config>,
     /// Voting and permissions policy.
     pub policy: LazyOption<VersionedPolicy>,
-
+    
     /// Amount of $NEAR locked for bonds.
     pub locked_amount: Balance,
 
@@ -78,6 +78,21 @@ pub struct Contract {
 
     /// Large blob storage.
     pub blobs: LookupMap<CryptoHash, AccountId>,
+
+    // **TODO** Implement `pending_nfts` here.  A prepairer-place
+    // We need to know if LookupMap can handle deleting entries from the middle (in_progress_nonce has to go up, we are not repeating IDs)
+    // I think if we use in_progress_nfts.remove(5), when we are doing the actual minting, that way we well get the data in a way that it is also deleted
+    // from this list, IF the transaction goes through, otherwise it will not change
+    pub in_progress_nfts: LookupMap<u64, InProgressMetadata>,
+
+    // **TODO** Implement in_progress_nonce here
+    pub in_progress_nonce: u64,
+
+    // **TODO** Implement Catalogues here
+    pub catalogues: HashMap<AccountId, Catalogue>,
+
+    // **TODO** Implement Income Tables
+    pub income_tables: HashMap<UniqId, IncomeTable>,
 }
 
 #[near_bindgen]
@@ -136,6 +151,16 @@ impl Contract {
     /// Returns factory information, including if auto update is allowed.
     pub fn get_factory_info(&self) -> FactoryInfo {
         internal_get_factory_info()
+    }
+
+    /// A very simple test that will show us whether we are ready to work with Satori or not
+    pub fn satori_test() {
+        // 1 . Do a Cross-Contract-Call to the Satori contract
+        // 2 . Get result
+        // 3 . From the result, read the field that we need
+        // 4. Log the result of the test
+        //    -> "Ok"
+        //    -> "Unauthorized"
     }
 }
 

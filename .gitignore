@@ -14,3 +14,9 @@ neardev
 
 **/nodemodules
 **/*.lock.json
+
+# dev_frontend
+dev_frontend/node_modules/
+dev_frontend/neardev/
+dev_frontend/.cache/
+dev_frontend/dist/

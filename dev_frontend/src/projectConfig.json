@@ -1,0 +1,5 @@
+{
+  "test": "MotherContractTest-0",
+  "contractName": "mothercontract.near",
+  "admin": "daorecords.near"
+}

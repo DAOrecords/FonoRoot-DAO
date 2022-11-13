@@ -2,13 +2,13 @@ import React from 'react';
 import { HashRouter, Navigate, Route, Routes } from 'react-router-dom';
 import { ToastContainer, toast, Slide } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-import TestPageOne from './TestPageOne';
-import TestPageTwo from './TestPageTwo';
-import TestPageThree from './TestPageThree';
-import TestPageFour from './TestPageFour';
-import TestPageFive from './TestPageFive';
-import TestPageSix from './TestPageSix';
-import TestPageSeven from './TestPageSeven';
+import TestPageOne from './Pages/Registration';
+import TestPageTwo from './Pages/PrepairingData';
+import TestPageThree from './Pages/UpdateData';
+import TestPageFour from './Pages/MintNft';
+import TestPageFive from './Pages/CreateRevenue';
+import TestPageSix from './Pages/AlterRevenue';
+import TestPageSeven from './Pages/DeactivateListing';
 
 
 export default function App() {

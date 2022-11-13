@@ -72,22 +72,26 @@ pub struct InProgressMetadata {
 
 // **TODO** We should have a big Catalogues obejct, something like this:
 //pub type Catalogues = HashMap<AccountId, Catalogue>; // or this goes to lib.rs
+// We could easily get all the songs for a given Artist, BUT, how do we get all the songs that exist, in chronological order?
 
 pub type Catalogue = HashMap<UniqId, CatalogueEntry>;
 
 pub struct CatalogueEntry {
     pub revenue_table: HashMap<AccountId, u64>,     // This is the revenue table that used to be part of the NFT in the FonoRoot contract
-    pub total_income: Balance,                      // This is the amount of money this song made       // Probably this will be moved elsewhere. 
-                                                    // If so, the above is static, this whole object  does not change when buy happens
-    pub current_balance: Balance,                   // Withdrawable balance
+    pub price: PriceInYoctoNear,
 }
 
 // **TODO** If we move `income` from Catalogue, we need another object for that. Should be very similar to Catalogues/Catalogue
-// pub type IncomeTables = HashMap<UniqId, IncomeTable>;
+//pub type IncomeTables = HashMap<UniqId, IncomeTable>; TreeMap!!
 
 pub struct IncomeTable = {
     pub total_income: Balance,
-    pub current_balance: Balance
+    pub current_balance: Balance,
+    // Entries that will tell that this is X song in Y contract
+    pub root_id: TokenId,
+    pub contract: AccountId,
+    /// owner: is needed, because we need to know where to find it in the Catalogue. Problem with this: We can't move the Song to another Catalogue, or we have to be very carefull.
+    // Timestamp We don't need it, just important that the order does not change. Chronological order
     // The way it will be payed out is dependent on the CatalogueTable, or on other table, so this is not dependent on User. This is independent, each song has it's own table.
 }
 

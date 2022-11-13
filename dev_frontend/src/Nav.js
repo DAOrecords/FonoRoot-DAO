@@ -30,7 +30,7 @@ export default function Nav() {
         </li>
 
         <li className="navListElement">
-          <Link to={'/testseven'}>Activate Listing</Link>
+          <Link to={'/testseven'}>Deactivate Listing</Link>
         </li>
       </ul>
     </nav>

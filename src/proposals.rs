@@ -116,7 +116,8 @@ pub enum ProposalKind {
     // **TODO** Add MintRoot and the other necesarry functions here
     MintRoot { params: WeDontKnow },
     PrepairNft { params: WeDontKnow },
-    UpdatePrepairedNft { params: WeDontKnow }
+    UpdatePrepairedNft { params: WeDontKnow },
+    ScheduleMint { params: WeDontKnow },
 }
 
 impl ProposalKind {
@@ -145,7 +146,8 @@ impl ProposalKind {
             // **TODO** Add the same functions here as above
             ProposalKind::MintRoot { .. } => "mint_root",
             ProposalKind::PrepairNft { .. } => "prepair_nft",
-            ProposalKind::UpdatePrepairedNft { .. } => "update_prepaired_nft"
+            ProposalKind::UpdatePrepairedNft { .. } => "update_prepaired_nft",
+            ProposalKind::ScheduleMint { .. } => "schedule_mint"
         }
     }
 }
@@ -423,6 +425,9 @@ impl Contract {
                 _;
             }
             ProposalKind::UpdatePrepairedNft { params } => {
+                _;
+            }
+            ProposalKind::ScheduleMint { params } => {
                 _;
             }
         };

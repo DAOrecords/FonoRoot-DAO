@@ -92,7 +92,7 @@ pub struct Contract {
     pub catalogues: HashMap<AccountId, Catalogue>,
 
     // **TODO** Implement Income Tables
-    pub income_tables: HashMap<UniqId, IncomeTable>,
+    pub income_tables:  TreeMap<UniqId, IncomeTable>,
 }
 
 #[near_bindgen]

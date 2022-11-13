@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import Nav from './Nav';
+import Nav from '../Nav';
 
 
 export default function TestPageTwo() {
+  const [title, setTitle] = useState("Smiling Sun");
   const [imageCID, setImageCID] = useState("QmWUrGSGbjdft3X5EL56Ldf11htPUiGrmzMfhYUJfU6jsQ");
   const [musicCID, setMusicCID] = useState("QmWUrGSGbjdft3X5EL56Ldf11htPUiGrmzMfhYUJfU6jsQ");
   const [metaCID, setMetaCID] = useState("QmWUrGSGbjdft3X5EL56Ldf11htPUiGrmzMfhYUJfU6jsQ");
@@ -29,6 +30,8 @@ export default function TestPageTwo() {
           <p>{".  "}</p>
           <p>{"We won't simulate the uploading of the data here, only the saving of the final CID to the MotherContract"}</p>
           
+          <label>Title</label>
+          <input className="cidInput" value={title} onChange={(e) => setTitle(e.target.value)}></input><br></br>
 
           <label>Image CID</label>
           <input className="cidInput" value={imageCID} onChange={(e) => setImageCID(e.target.value)}></input><br></br>

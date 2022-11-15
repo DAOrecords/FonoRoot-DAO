@@ -1,5 +1,5 @@
 use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
-use near_sdk::collections::{LazyOption, LookupMap};
+use near_sdk::collections::{LazyOption, LookupMap, TreeMap};
 use near_sdk::json_types::{Base58CryptoHash, U128};
 use near_sdk::serde::{Deserialize, Serialize};
 use near_sdk::{
@@ -13,7 +13,7 @@ pub use crate::policy::{
 };
 use crate::proposals::VersionedProposal;
 pub use crate::proposals::{Proposal, ProposalInput, ProposalKind, ProposalStatus};
-pub use crate::types::{Action, Config, OldAccountId, OLD_BASE_TOKEN};
+pub use crate::types::{Action, Config, OldAccountId, OLD_BASE_TOKEN, InProgressMetadata, Catalogue, UniqId, IncomeTable};
 use crate::upgrade::{internal_get_factory_info, internal_set_factory_info, FactoryInfo};
 pub use crate::views::{BountyOutput, ProposalOutput};
 
@@ -35,6 +35,8 @@ pub enum StorageKeys {
     BountyClaimers,
     BountyClaimCounts,
     Blobs,
+    Catalogues,
+    InProgressNfts
 }
 
 /// After payouts, allows a callback
@@ -89,7 +91,7 @@ pub struct Contract {
     pub in_progress_nonce: u64,
 
     // **TODO** Implement Catalogues here
-    pub catalogues: HashMap<AccountId, Catalogue>,
+    pub catalogues: LookupMap<AccountId, Catalogue>,
 
     // **TODO** Implement Income Tables
     pub income_tables:  TreeMap<UniqId, IncomeTable>,
@@ -113,6 +115,11 @@ impl Contract {
             bounty_claims_count: LookupMap::new(StorageKeys::BountyClaimCounts),
             blobs: LookupMap::new(StorageKeys::Blobs),
             locked_amount: 0,
+            in_progress_nfts: LookupMap::new(StorageKeys::InProgressNfts),
+            in_progress_nonce: 0,
+            catalogues: LookupMap::new(StorageKeys::Catalogues),
+            income_tables: TreeMap::new(b"t")
+            
         };
         internal_set_factory_info(&FactoryInfo {
             factory_id: env::predecessor_account_id(),

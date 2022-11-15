@@ -1,7 +1,8 @@
 use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
-use near_sdk::json_types::Base64VecU8;
+use near_sdk::json_types::{Base64VecU8, U128};
 use near_sdk::serde::{Deserialize, Serialize};
 use near_sdk::{AccountId, Balance, Gas};
+use near_sdk::collections::{LookupMap};
 
 /// Account ID used for $NEAR in near-sdk v3.
 /// Need to keep it around for backward compatibility.
@@ -62,6 +63,12 @@ pub enum Action {
     MoveToHub,
 }
 
+// **TODO** Implement UniqId
+pub type UniqId = String;             //  ! Not implemented!!
+
+pub type SalePriceInYoctoNear = U128;
+pub type TokenId = String;                          // Same as in Minting Contract
+
 // **TODO** Implement InProgressMetadata here
 pub struct InProgressMetadata {
     // **TODO** Add fields like `contract`, `image`, `music_folder`, `metadata_json`, `revenue_table`, etc. And `master`/`artist`. 
@@ -71,26 +78,30 @@ pub struct InProgressMetadata {
 }
 
 // **TODO** We should have a big Catalogues obejct, something like this:
-//pub type Catalogues = HashMap<AccountId, Catalogue>; // or this goes to lib.rs
+//pub type Catalogues = LookupMap<AccountId, Catalogue>; // or this goes to lib.rs
 // We could easily get all the songs for a given Artist, BUT, how do we get all the songs that exist, in chronological order?
 
-pub type Catalogue = HashMap<UniqId, CatalogueEntry>;
+pub type Catalogue = LookupMap<UniqId, CatalogueEntry>;
 
 pub struct CatalogueEntry {
-    pub revenue_table: HashMap<AccountId, u64>,     // This is the revenue table that used to be part of the NFT in the FonoRoot contract
-    pub price: PriceInYoctoNear,
+    pub revenue_table: LookupMap<AccountId, u64>,     // This is the revenue table that used to be part of the NFT in the FonoRoot contract
+    pub price: SalePriceInYoctoNear,
 }
 
 // **TODO** If we move `income` from Catalogue, we need another object for that. Should be very similar to Catalogues/Catalogue
 //pub type IncomeTables = HashMap<UniqId, IncomeTable>; TreeMap!!
 
-pub struct IncomeTable = {
+// **TODO** This is just a placeholder
+pub type WeDontKnow = String;
+
+#[derive(BorshSerialize, BorshDeserialize)]
+pub struct IncomeTable {
     pub total_income: Balance,
     pub current_balance: Balance,
     // Entries that will tell that this is X song in Y contract
     pub root_id: TokenId,
     pub contract: AccountId,
-    /// owner: is needed, because we need to know where to find it in the Catalogue. Problem with this: We can't move the Song to another Catalogue, or we have to be very carefull.
+    // owner: is needed, because we need to know where to find it in the Catalogue. Problem with this: We can't move the Song to another Catalogue, or we have to be very carefull.
     // Timestamp We don't need it, just important that the order does not change. Chronological order
     // The way it will be payed out is dependent on the CatalogueTable, or on other table, so this is not dependent on User. This is independent, each song has it's own table.
 }

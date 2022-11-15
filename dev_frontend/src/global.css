@@ -51,6 +51,7 @@ button:hover {
 
 nav {
   position: fixed;
+  z-index: 2;
   height: 50px;
   background-color: rgb(4, 4, 48);
   width: 100%;
@@ -58,6 +59,10 @@ nav {
   padding: 0;
   top: 0;
   left: 0;
+
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
 }
 
 #navList {

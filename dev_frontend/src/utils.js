@@ -2,7 +2,7 @@ import { connect, Contract, keyStores, WalletConnection, utils, KeyPair } from '
 import * as nearAPI from "near-api-js";
 const CryptoJS = require('crypto-js');
 
-const mode = 'mainnet';       // 'mainnet' || 'development'
+const mode = 'development';       // 'mainnet' || 'development'
 
 /** Real config. It's async. It was important when we tried to clone the site, so the config is not burnt in */
 async function getRealConfig(env) {
@@ -57,12 +57,144 @@ export async function initContract() {
   window.accountId = window.walletConnection.getAccountId()                                // Getting the Account ID. If still unauthorized, it's just empty string
   
   window.contract = await new Contract(window.walletConnection.account(), nearConfig.contractName, {
-    viewMethods: ['nft_metadata', 'nft_token', 'nft_tokens_for_owner', 'nft_tokens', 'get_crust_key', 'get_next_buyable', 'view_guestbook_entries'],
-    changeMethods: ['new_default_meta', 'new', 'mint_root', 'set_crust_key', 'buy_nft_from_vault', 'transfer_nft', 'create_guestbook_entry', 'withdraw', 'copy'],
+    viewMethods: ["get_policy", "get_last_proposal_id", "get_proposals"],
+    changeMethods: ["add_proposal", "act_proposal"],
   })
 }
 
+// Create (master) group
+export async function createGroup(group) {
+  let success = false;
+  const args = {
+    proposal: {
+      description: "Create Master Group",
+      kind: {
+        ChangePolicyAddOrUpdateRole: {
+          role: {
+            name: group,
+            kind: {
+              Group: []
+            },
+            permissions: [
+              "MintRoot:*"
+            ],
+            vote_policy: {
+              // Should be 1 / Infinity
+            }
+          }
+        }
+      }
+    }
+  }
 
+  const gas = 100000000000000;
+  const amount = utils.format.parseNearAmount("1");
+
+  await window.contract.add_proposal(args, gas, amount)
+    .then((msg) => { 
+      console.log("Success! (Create new Master Group)", msg); 
+      success = true; 
+    })
+    .catch((err) => console.error(`There was an error while trying to create new Master Group ${group}: `, err));
+  
+  return success;
+}
+
+// Add Artist to master group of the specific contract
+export async function registerUser(user, group) {
+  let success = false;
+  const args = {
+    proposal: {
+      description: "Add Artist to master group (or collab to collab group)",
+      kind: {
+        AddMemberToRole: {
+          member_id: user,
+          role: group,
+        }
+      }
+    }
+  }
+
+  const gas = 100000000000000;
+  const amount = utils.format.parseNearAmount("1");
+
+  await window.contract.add_proposal(args, gas, amount)
+    .then((msg) => { 
+      console.log("Success! (Add user to group)", msg); 
+      success = true; 
+    })
+    .catch((err) => console.error(`There was an error while trying to add ${user} to ${group}: `, err));
+  
+  return success;
+}
+
+// Act on Proposal
+export async function actOnProposal(proposalId) {
+  let success = false;
+
+  const args = {
+    id: proposalId,
+    action: "VoteApprove"
+  }
+
+  const gas = 100000000000000;
+
+  await window.contract.act_proposal(args, gas)
+    .then((msg) => {
+      console.log("Success! (Act on proposal), ", msg);
+      success = true;
+    })
+    .catch((err) => console.error(`There was an error while trying to act on proposal with proposal ID ${proposalId}`, err));
+
+    return success;
+}
+
+// Get last proposal ID
+export async function getLastProposalId() {
+  let lastProposalId = -1;
+
+  await window.contract.get_last_proposal_id()
+    .then((response) => {
+      console.log("Got last proposal ID: ", response);
+      lastProposalId = response;
+    })
+    .catch((err) => console.error("There was an error while trying to get the last proposal ID: ", err));
+
+    return lastProposalId;
+}
+
+// Get list of proposals from index
+export async function getListOfProposals(index) {
+  let proposalList = [];
+
+  const args = {
+    "from_index": (index>=0) ? index : 0,
+    "limit": 10
+  }
+
+  await window.contract.get_proposals(args)
+    .then((response) => {
+      console.log("Successfully got the list of proposals from index ", index);
+      proposalList = response;
+    })
+    .catch((err) => console.error(`There was an error while trying to get the list of proposals from index ${index}, `, err));
+
+    return proposalList;
+}
+
+// Get policy objects
+export async function getListOfPolicyRoles() {
+  let roles = [];
+
+  await window.contract.get_policy()
+    .then((response) => {
+      console.log("Success! Roles fetched.");
+      roles = response.roles;
+    })
+    .catch((err) => console.error(`There was an error while trying to fetch the policy roles`, err));
+
+    return roles;
+}
 
 export function logout() {
   console.log("?")

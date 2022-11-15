@@ -9,6 +9,7 @@ import TestPageFour from './Pages/MintNft';
 import TestPageFive from './Pages/CreateRevenue';
 import TestPageSix from './Pages/AlterRevenue';
 import TestPageSeven from './Pages/DeactivateListing';
+import CreateGroup from './Pages/CreateGroup';
 
 
 export default function App() {
@@ -82,6 +83,13 @@ export default function App() {
             <TestPageSeven />
           }
         />           
+        <Route 
+          exact
+          path='/create_group'
+          element={
+            <CreateGroup />
+          }
+        />        
 
       </Routes>
     </HashRouter>

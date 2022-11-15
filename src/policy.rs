@@ -198,10 +198,18 @@ pub fn default_policy(council: Vec<AccountId>) -> Policy {
                 ]
                 .into_iter()
                 .collect(),
+                // **TODO** Rewrite this, so 1 person is enough to create a new group or add a new Artist to the group
+                // **TODO** This should be more nuanced in the final product.
                 vote_policy: HashMap::default(),
             },
         ],
-        default_vote_policy: VotePolicy::default(),
+        // **TODO** Rewrite this, so 1 person is enough to create a new group or add a new Artist to the group
+        // **TODO** This should be more nuanced in the final product.
+        default_vote_policy: VotePolicy {
+            weight_kind: WeightKind::RoleWeight,
+            quorum: U128(1),
+            threshold: WeightOrRatio::Ratio(0,100),
+        },
         proposal_bond: U128(10u128.pow(24)),
         proposal_period: U64::from(1_000_000_000 * 60 * 60 * 24 * 7),
         bounty_bond: U128(10u128.pow(24)),

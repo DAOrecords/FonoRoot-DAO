@@ -1,5 +1,4 @@
 {
-  "test": "MotherContractTest-0",
-  "contractName": "mothercontract.near",
-  "admin": "daorecords.near"
+  "test": "MotherContractTest-quorum",
+  "contractName": "mother-contract-test-2.soundsplash.testnet"
 }

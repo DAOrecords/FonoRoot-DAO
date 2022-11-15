@@ -1,5 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
+import { login, logout } from './utils';
+
 
 export default function Nav() {
   return (
@@ -32,7 +34,11 @@ export default function Nav() {
         <li className="navListElement">
           <Link to={'/testseven'}>Deactivate Listing</Link>
         </li>
+        <li className="navListElement">
+          <Link to={'/create_group'}>Create New Group</Link>
+        </li>
       </ul>
+      {(window.accountId) ? <button onClick={logout}>Logout</button> : <button onClick={login}>Login</button>}
     </nav>
   )
 }

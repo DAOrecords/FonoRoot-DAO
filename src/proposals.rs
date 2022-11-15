@@ -8,7 +8,7 @@ use near_sdk::{log, AccountId, Balance, Gas, PromiseOrValue};
 use crate::policy::UserInfo;
 use crate::types::{
     convert_old_to_new_token, Action, Config, OldAccountId, GAS_FOR_FT_TRANSFER, OLD_BASE_TOKEN,
-    ONE_YOCTO_NEAR,
+    ONE_YOCTO_NEAR, WeDontKnow
 };
 use crate::upgrade::{upgrade_remote, upgrade_using_factory};
 use crate::*;
@@ -417,18 +417,18 @@ impl Contract {
                 self.policy.set(&VersionedPolicy::Current(new_policy));
                 PromiseOrValue::Value(())
             }
-            ProposalKind::MintRoot { params } => {
+            ProposalKind::MintRoot { params: _ } => {
+                todo!();
                 // **TODO** The promise here should do something with the Catalogue
-                _;
             }
-            ProposalKind::PrepairNft { params } => {
-                _;
+            ProposalKind::PrepairNft { params: _ } => {
+                todo!();
             }
-            ProposalKind::UpdatePrepairedNft { params } => {
-                _;
+            ProposalKind::UpdatePrepairedNft { params: _ } => {
+                todo!();
             }
-            ProposalKind::ScheduleMint { params } => {
-                _;
+            ProposalKind::ScheduleMint { params: _ } => {
+                todo!();
             }
         };
         match result {

@@ -8,7 +8,7 @@ use near_sdk::{log, AccountId, Balance, Gas, PromiseOrValue};
 use crate::policy::UserInfo;
 use crate::types::{
     convert_old_to_new_token, Action, Config, OldAccountId, GAS_FOR_FT_TRANSFER, OLD_BASE_TOKEN,
-    ONE_YOCTO_NEAR, WeDontKnow
+    ONE_YOCTO_NEAR, WeDontKnow, NftDataFromFrontEnd
 };
 use crate::upgrade::{upgrade_remote, upgrade_using_factory};
 use crate::*;
@@ -115,8 +115,8 @@ pub enum ProposalKind {
     ChangePolicyUpdateParameters { parameters: PolicyParameters },
     // **TODO** Add MintRoot and the other necesarry functions here
     MintRoot { params: WeDontKnow },
-    PrepairNft { params: WeDontKnow },
-    UpdatePrepairedNft { params: WeDontKnow },
+    PrepairNft { nft_data: NftDataFromFrontEnd },
+    UpdatePrepairedNft { id: u64, new_nft_data: NftDataFromFrontEnd },
     ScheduleMint { params: WeDontKnow },
 }
 
@@ -418,17 +418,64 @@ impl Contract {
                 PromiseOrValue::Value(())
             }
             ProposalKind::MintRoot { params: _ } => {
-                todo!();
+                //self.assert_artist_can_mint(nft_data.contract.clone());
+                
+                PromiseOrValue::Value(())
                 // **TODO** The promise here should do something with the Catalogue
             }
-            ProposalKind::PrepairNft { params: _ } => {
-                todo!();
+            ProposalKind::PrepairNft { nft_data } => {
+                self.assert_artist_can_mint(nft_data.contract.clone());
+
+                let the_new_nft_data = InProgressMetadata {
+                    id: self.in_progress_nonce,
+                    initiated: env::block_timestamp(),
+                    artist: env::predecessor_account_id(),
+                    contract: nft_data.contract.clone(),
+                    scheduled: None,
+                    title: nft_data.title.clone(),
+                    desc: nft_data.desc.clone(),
+                    image: nft_data.image_cid.clone(),
+                    music: nft_data.music_folder_cid.clone(),
+                    meta: nft_data.meta_json_cid.clone(),
+                };
+                
+                self.in_progress_nfts.insert(&self.in_progress_nonce, &the_new_nft_data);
+                self.in_progress_nonce = self.in_progress_nonce + 1;
+                PromiseOrValue::Value(())
             }
-            ProposalKind::UpdatePrepairedNft { params: _ } => {
-                todo!();
+            ProposalKind::UpdatePrepairedNft { id, new_nft_data } => {
+
+                let old_data = self.in_progress_nfts.get(&id).unwrap();
+                self.assert_artist_can_mint(new_nft_data.contract.clone());
+
+                // By this we also make sure that the user can't insert an item into a LookUpMap to an arbitrary position, for example, after the nonce
+                assert_eq!(
+                    &old_data.artist,
+                    &env::predecessor_account_id(),
+                    "You can only update prepaired NFTs that you originally created!"
+                );
+
+                let updated_nft_data = InProgressMetadata {
+                    id: id.clone(),
+                    initiated: old_data.initiated,
+                    artist: env::predecessor_account_id(),
+                    contract: new_nft_data.contract.clone(),
+                    scheduled: old_data.scheduled,
+                    title: new_nft_data.title.clone(),
+                    desc: new_nft_data.desc.clone(),
+                    image: new_nft_data.image_cid.clone(),
+                    music: new_nft_data.music_folder_cid.clone(),
+                    meta: new_nft_data.meta_json_cid.clone(),
+                };
+
+                self.in_progress_nfts.insert(id, &updated_nft_data);
+
+                PromiseOrValue::Value(())
             }
             ProposalKind::ScheduleMint { params: _ } => {
-                todo!();
+                //self.assert_artist_can_mint(nft_data.contract.clone());
+
+                PromiseOrValue::Value(())
             }
         };
         match result {
@@ -672,4 +719,26 @@ impl Contract {
             .insert(&proposal_id, &VersionedProposal::Default(proposal.into()));
         result
     }
+
+    /// Test if caller (Artist) has the right to mint on the specific contract
+    pub fn assert_artist_can_mint(&self, contract_name: AccountId) {
+        let master_group = "master_".to_string() + &contract_name.to_string();  // Name of the MasterGroup
+        let artist = UserInfo {                                                 // Artist as UserInfo struct
+            account_id: env::predecessor_account_id(),
+            amount: 0
+        };
+
+        for i in 0..self.policy.get().unwrap().to_policy().roles.len() {
+            if &self.policy.get().unwrap().to_policy().roles[i].name == &master_group {
+                log!("match_user(): {:?}", self.policy.get().unwrap().to_policy().roles[i].kind.match_user(&artist));
+                assert!(
+                    self.policy.get().unwrap().to_policy().roles[i].kind.match_user(&artist),
+                    "You are not allowed to mint on this specific contract."
+                );
+                return;
+            }
+        }
+        assert!(false, "The role was not found.");
+    }
 }
+

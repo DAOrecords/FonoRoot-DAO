@@ -8,31 +8,31 @@ export default function Nav() {
     <nav>
       <ul id="navList">
         <li className="navListElement">
-          <Link to={'/testone'}>Registration</Link>
+          <Link to={'/register_user'}>Registration</Link>
         </li>
 
         <li className="navListElement">
-          <Link to={'/testtwo'}>Prepairing Data</Link>
+          <Link to={'/prepair_data'}>Prepairing Data</Link>
         </li>
 
         <li className="navListElement">
-          <Link to={'/testthree'}>Updating Data</Link>
+          <Link to={'/update_data'}>Updating Data</Link>
         </li>
 
         <li className="navListElement">
-          <Link to={'/testfour'}>Minting</Link>
+          <Link to={'/do_the_minting'}>Minting</Link>
         </li>
 
         <li className="navListElement">
-          <Link to={'/testfive'}>Create Revenue Table</Link>
+          <Link to={'/create_revenue_table'}>Create Revenue Table</Link>
         </li>
 
         <li className="navListElement">
-          <Link to={'/testsix'}>Alter Revenue Table</Link>
+          <Link to={'/alter_revenue_table'}>Alter Revenue Table</Link>
         </li>
 
         <li className="navListElement">
-          <Link to={'/testseven'}>Deactivate Listing</Link>
+          <Link to={'/deactivate_listing'}>Deactivate Listing</Link>
         </li>
         <li className="navListElement">
           <Link to={'/create_group'}>Create New Group</Link>

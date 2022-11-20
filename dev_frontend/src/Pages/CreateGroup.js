@@ -7,6 +7,7 @@ export default function CreateGroup() {
   const [contractName, setContractName] = useState("");
   const [proposalId, setProposalId] = useState(null);
   const [masterGroups, setMasterGroups] = useState([]);
+  const [message, setMessage] = useState("");
 
   async function createNewGroupProposal() {
     const isMaster = true;
@@ -21,8 +22,9 @@ export default function CreateGroup() {
   }
 
   // Act on proposal for the Creation of New Group
-  function finalizeCreateNewGroup() {
-    actOnProposal(proposalId);
+  async function finalizeCreateNewGroup() {
+    const returnMessage = await actOnProposal(proposalId);
+    setMessage(JSON.stringify(returnMessage));
   }
 
   useEffect(async () => {
@@ -44,7 +46,7 @@ export default function CreateGroup() {
       console.log("savedGroupName: ", savedGroupName)
       return proposalEntry.kind.ChangePolicyAddOrUpdateRole.role.name === savedGroupName
     });
-    console.log("the Entry: ", inProgressProposals[i]);
+    console.log("the Entry: ", changePolicyKindProposals[i]);
 
     const theId = changePolicyKindProposals[i].id;
     setProposalId(theId);
@@ -88,6 +90,7 @@ export default function CreateGroup() {
           <p>{". "}</p>
           <p>{"The ID of the proposal that we want to act on should be: "}<code>{proposalId}</code></p>
           <button onClick={finalizeCreateNewGroup}>Finalize Creation of New Group</button>
+          <p><code>{message}</code></p>
         </section>
 
         <section>

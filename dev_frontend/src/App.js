@@ -31,54 +31,54 @@ export default function App() {
         <Route 
           exact
           path='/'
-          element={<Navigate to={'/testone'} />}
+          element={<Navigate to={'/register_user'} />}
         />
 
         <Route 
           exact
-          path='/testone'
+          path='/register_user'
           element={
             <TestPageOne />
           }
         />
         <Route 
           exact
-          path='/testtwo'
+          path='/prepair_data'
           element={
             <TestPageTwo />
           }
         />
         <Route 
           exact
-          path='/testthree'
+          path='/update_data'
           element={
             <TestPageThree />
           }
         />
         <Route 
           exact
-          path='/testfour'
+          path='/do_the_minting'
           element={
             <TestPageFour />
           }
         />
         <Route 
           exact
-          path='/testfive'
+          path='/create_revenue_table'
           element={
             <TestPageFive />
           }
         />       
         <Route 
           exact
-          path='/testsix'
+          path='/alter_revenue_table'
           element={
             <TestPageSix />
           }
         />     
         <Route 
           exact
-          path='/testseven'
+          path='/deactivate_listing'
           element={
             <TestPageSeven />
           }

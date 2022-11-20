@@ -97,6 +97,15 @@ impl Contract {
             .collect()
     }
 
+    /// List all InProgressNfts
+    pub fn get_in_progress_nfts(&self) -> Vec<InProgressMetadata> {
+        (0..self.in_progress_nonce)
+            .filter_map(|id| {
+                self.in_progress_nfts.get(&id)
+            })
+            .collect()
+    }
+
     /// Get specific proposal.
     pub fn get_proposal(&self, id: u64) -> ProposalOutput {
         let proposal = self.proposals.get(&id).expect("ERR_NO_PROPOSAL");

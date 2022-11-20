@@ -11,6 +11,7 @@ export default function TestPageOne() {
   const [resultVisible, setResultVisible] = useState(false);
   const [proposalId, setProposalId] = useState(null);
   const [masterGroups, setMasterGroups] = useState([]);
+  const [message, setMessage] = useState("");
 
   // Create proposal for Registration
   async function createProposal() {
@@ -27,8 +28,9 @@ export default function TestPageOne() {
   }
 
   // Act on proposal for the Registration of New User
-  function finalizeRegistration() {
-    actOnProposal(proposalId);
+  async function finalizeRegistration() {
+    const returnMessage = await actOnProposal(proposalId);
+    setMessage(JSON.stringify(returnMessage));
   }
 
   // This useEffect is setting the proposalId, for finalizing
@@ -46,7 +48,7 @@ export default function TestPageOne() {
     console.log("addMemberKindProposals: ", addMemberKindProposals);
 
     const i = addMemberKindProposals.findIndex((proposalEntry) => proposalEntry.kind.AddMemberToRole.role === savedGroupName);
-    console.log("the Entry: ", inProgressProposals[i]);
+    console.log("the Entry: ", addMemberKindProposals[i]);
 
     const theId = addMemberKindProposals[i].id;
     setProposalId(theId);
@@ -108,6 +110,7 @@ export default function TestPageOne() {
           <p>{". "}</p>
           <p>{"The ID of the proposal that we want to act on should be: "}<code>{proposalId}</code></p>
           <button onClick={finalizeRegistration}>Finalize Registration</button>
+          <p><code>{message}</code></p>
         </section>
 
         <section>

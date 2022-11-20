@@ -70,11 +70,49 @@ pub type SalePriceInYoctoNear = U128;
 pub type TokenId = String;                          // Same as in Minting Contract
 
 // **TODO** Implement InProgressMetadata here
+#[derive(BorshSerialize, BorshDeserialize, Serialize, Deserialize, Debug)]
+#[serde(crate = "near_sdk::serde")]
 pub struct InProgressMetadata {
     // **TODO** Add fields like `contract`, `image`, `music_folder`, `metadata_json`, `revenue_table`, etc. And `master`/`artist`. 
     // These fields can be null, because it is possible, that the Artist does not finish uploading these info, and it will be still here, half ready.
     // When it is ready, it will be possible to mint based on the prepairer-data that is here.
     // The data that was already made into an NFT, should be deleted.
+
+    /// ID of the InProgressMetadata
+    pub id: u64,
+    /// Timestamp, env::block_timestamp()
+    pub initiated: u64,
+    /// Account ID of the minter, usually the Artist.
+    pub artist: AccountId,
+    /// Minting contract. The NFT will live on this contract.
+    pub contract: AccountId,
+    /// We are not sure that this field will stay here
+    //pub ready: bool,
+    /// It is not sure that we will have this field
+    pub scheduled: Option<u64>,
+    /// Title of the NFT, follows NFT standard
+    pub title: Option<String>,
+    /// Description of the NFT, follows NFT standard
+    pub desc: Option<String>,
+    /// Metadata, does not follow standard, here inside this we will have fields that record labels usually use. This is an IPFS CID
+    pub meta: Option<String>,
+    /// Image, according to NFT standard. It will be an IPFS CID
+    pub image: Option<String>,
+    /// Music folder, not part of NFT standard. This is an IPFS CID, and it points to a folder that has different quality files of the same song.
+    pub music: Option<String>,
+}
+
+// **TODO** This is the data that is sent from the front end
+#[derive(BorshSerialize, BorshDeserialize, Serialize, Deserialize, Debug)]
+#[serde(crate = "near_sdk::serde")]
+pub struct NftDataFromFrontEnd {
+    // **TODO** We will need hash as well.
+    pub contract: AccountId,
+    pub title: Option<String>,
+    pub desc: Option<String>,
+    pub image_cid: Option<String>,
+    pub music_folder_cid: Option<String>,
+    pub meta_json_cid: Option<String>
 }
 
 // **TODO** We should have a big Catalogues obejct, something like this:

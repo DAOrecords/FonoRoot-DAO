@@ -57,7 +57,7 @@ export async function initContract() {
   window.accountId = window.walletConnection.getAccountId()                                // Getting the Account ID. If still unauthorized, it's just empty string
   
   window.contract = await new Contract(window.walletConnection.account(), nearConfig.contractName, {
-    viewMethods: ["get_policy", "get_last_proposal_id", "get_proposals"],
+    viewMethods: ["get_policy", "get_last_proposal_id", "get_proposals", "get_in_progress_nfts"],
     changeMethods: ["add_proposal", "act_proposal"],
   })
 }
@@ -76,7 +76,10 @@ export async function createGroup(group) {
               Group: []
             },
             permissions: [
-              "MintRoot:*"
+              "MintRoot:*",
+              "PrepairNft:*",
+              "UpdatePrepairedNft:*",
+              "ScheduleMint:*"
             ],
             vote_policy: {
               // Should be 1 / Infinity
@@ -93,10 +96,82 @@ export async function createGroup(group) {
   await window.contract.add_proposal(args, gas, amount)
     .then((msg) => { 
       console.log("Success! (Create new Master Group)", msg); 
-      success = true; 
+      success = true;
     })
     .catch((err) => console.error(`There was an error while trying to create new Master Group ${group}: `, err));
   
+  return success;
+}
+
+// Prepair Data (create new entry in `in_progress_nfts`)
+export async function prepairNft(newNftDetails) {
+  let inProgressID = -1;
+
+  const args = {
+    proposal: {
+      description: `Prepair NFT: ${newNftDetails.title}`,
+      kind: {
+        PrepairNft: {
+          nft_data: {
+            contract: newNftDetails.contract,
+            title: newNftDetails.title,
+            desc: newNftDetails.description,
+            image_cid: newNftDetails.image_cid,
+            music_folder_cid: newNftDetails.music_cid,
+            meta_json_cid: newNftDetails.meta_cid,
+          }
+        }
+      }
+    }
+  };
+
+  const gas = 100000000000000;
+  const amount = utils.format.parseNearAmount("1");
+  
+  await window.contract.add_proposal(args, gas, amount)
+    .then((id) => {
+      console.log("Success! (Prepair NFT)", msg);
+      // not good, will not get ID this way (otherwise working)
+      inProgressID = id;
+    })
+    .catch((err) => console.error(`There was an error while prepairing NFT data. NFT title: ${newNftDetails.title}`, err));
+
+  return inProgressID
+}
+
+// Update Data (overwrite an entry in `in_progress_nfts`)
+export async function updateNft(id, updatedNftDetails) {
+  let success = false;
+
+  const args = {
+    proposal: {
+      description: `Update NFT: ${updatedNftDetails.title}`,
+      kind: {
+        UpdatePrepairedNft: {
+          id: id,
+          new_nft_data: {
+            contract: updatedNftDetails.contract,
+            title: updatedNftDetails.title,
+            desc: updatedNftDetails.description,
+            image_cid: updatedNftDetails.image_cid,
+            music_folder_cid: updatedNftDetails.music_cid,
+            meta_json_cid: updatedNftDetails.meta_cid,
+          }
+        }
+      }
+    }
+  };
+console.log(args)
+  const gas = 100000000000000;
+  const amount = utils.format.parseNearAmount("1");
+
+  await window.contract.add_proposal(args, gas, amount)
+    .then((msg) => {
+      console.log("Success! (Updating NFT)", msg);
+      success = true;
+    })
+    .catch((err) => console.error(`There was an error while updating NFT data. ID: ${id}`, err));
+
   return success;
 }
 
@@ -130,7 +205,7 @@ export async function registerUser(user, group) {
 
 // Act on Proposal
 export async function actOnProposal(proposalId) {
-  let success = false;
+  let message = "not_succeed";
 
   const args = {
     id: proposalId,
@@ -142,11 +217,14 @@ export async function actOnProposal(proposalId) {
   await window.contract.act_proposal(args, gas)
     .then((msg) => {
       console.log("Success! (Act on proposal), ", msg);
-      success = true;
+      message = "Success! (Act on proposal), " +  msg;
     })
-    .catch((err) => console.error(`There was an error while trying to act on proposal with proposal ID ${proposalId}`, err));
+    .catch((err) => {
+      console.error(`There was an error while trying to act on proposal with proposal ID ${proposalId}`, err);
+      message = `There was an error while trying to act on proposal with proposal ID ${proposalId} ` +  err
+    });
 
-    return success;
+    return message;
 }
 
 // Get last proposal ID
@@ -180,6 +258,20 @@ export async function getListOfProposals(index) {
     .catch((err) => console.error(`There was an error while trying to get the list of proposals from index ${index}, `, err));
 
     return proposalList;
+}
+
+// Get list of all InProgress NFTs
+export async function getListOfAllInProgressNfts() {
+  let inProgressNfts = [];
+
+  await window.contract.get_in_progress_nfts()
+    .then((list) => {
+      console.log("Successfully got the list of all InProgress NFTs: ", list);
+      inProgressNfts = list;
+    })
+    .catch((err) => console.error("There was an error while trying to fetch the list of InProgress NFTs: ", err));
+
+  return inProgressNfts;
 }
 
 // Get policy objects

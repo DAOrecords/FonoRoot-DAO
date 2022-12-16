@@ -319,6 +319,7 @@ mod tests {
     fn test_vote_twice() {
         let mut context = VMContextBuilder::new();
         testing_env!(context.predecessor_account_id(accounts(1)).build());
+        // **TODO** Most likely this is also failing because we've changed the DefaultVotePolicy
         let mut contract = Contract::new(
             Config::test_config(),
             VersionedPolicy::Default(vec![accounts(1).into(), accounts(2).into()]),

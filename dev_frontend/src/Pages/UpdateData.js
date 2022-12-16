@@ -32,7 +32,7 @@ export default function TestPageThree() {
     updateNft(inProgressID, updatedNftDetails);
   }
 
-  // Act on proposal for the Creation of New Group
+  // Act on proposal for the Update Data
   async function finalizeUpdateNft() {
     const returnMessage = await actOnProposal(proposalId);
     setMessage(JSON.stringify(returnMessage));

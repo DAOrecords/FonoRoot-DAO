@@ -205,6 +205,7 @@ pub fn default_policy(council: Vec<AccountId>) -> Policy {
         ],
         // **TODO** Rewrite this, so 1 person is enough to create a new group or add a new Artist to the group
         // **TODO** This should be more nuanced in the final product.
+        // **TODO** Because of this `test_update_default_vote_policy` will fail, we are aware of this, we will either modify the test or change this value in the final product.
         default_vote_policy: VotePolicy {
             weight_kind: WeightKind::RoleWeight,
             quorum: U128(1),

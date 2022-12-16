@@ -86,8 +86,6 @@ pub struct InProgressMetadata {
     pub artist: AccountId,
     /// Minting contract. The NFT will live on this contract.
     pub contract: AccountId,
-    /// We are not sure that this field will stay here
-    //pub ready: bool,
     /// It is not sure that we will have this field
     pub scheduled: Option<u64>,
     /// Title of the NFT, follows NFT standard
@@ -102,8 +100,46 @@ pub struct InProgressMetadata {
     pub music: Option<String>,
 }
 
-// **TODO** This is the data that is sent from the front end
+// **TODO** Implement MintingContractArgs here
 #[derive(BorshSerialize, BorshDeserialize, Serialize, Deserialize, Debug)]
+#[serde(crate = "near_sdk::serde")]
+pub struct MintingContractArgs {
+    pub receiver_id: AccountId,
+    pub metadata: MintingContractMeta,
+
+}
+
+// **TODO** Implement MintingContracMeta here
+#[derive(BorshSerialize, BorshDeserialize, Serialize, Deserialize, Debug)]
+#[serde(crate = "near_sdk::serde")]
+pub struct MintingContractMeta {
+    pub title: String,                      // This is `title` in InProgressMetadata
+    pub description: String,                // This is `desc` in InProgressMetadata
+    pub media: String,                      // This is `image` in InProgressMetadata
+    pub media_hash: Option<Base64VecU8>,    // We will have to do this later
+    pub copies: Option<u64>,                // We will pass None
+    pub issued_at: Option<u64>,             // We will pass None
+    pub expires_at: Option<u64>,            // We will pass None
+    pub starts_at: Option<u64>,             // We will pass None
+    pub updated_at: Option<u64>,            // We will pass None
+    pub extra: Option<String>,              // This is JSON-stringified version of MintingContractExtra
+    pub reference: String,                  // This is `meta` in InProgressMetadata
+    pub reference_hash: Option<Base64VecU8>,// We will have to do this later
+}
+
+// **TODO** Implement MintingContractExtra here
+#[derive(BorshSerialize, BorshDeserialize, Serialize, Deserialize, Debug)]
+#[serde(crate = "near_sdk::serde")]
+pub struct MintingContractExtra {
+    pub music_cid: String,                                      // This is `music` in InProgressMetadata
+    pub music_hash: Option<Base64VecU8>,                        // We will pass None
+    pub parent: Option<TokenId>,                                // We will pass None
+    pub instance_nonce: u32,                                    // We will pass a very lare namber, the MintingContract will overwrite it
+    pub generation: u32,                                        // We will pass a very lare namber, the MintingContract will overwrite it
+}
+
+// **TODO** This is the data that is sent from the front end
+#[derive(BorshSerialize, BorshDeserialize, Serialize, Deserialize, Clone, Debug)]
 #[serde(crate = "near_sdk::serde")]
 pub struct NftDataFromFrontEnd {
     // **TODO** We will need hash as well.

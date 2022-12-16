@@ -175,6 +175,36 @@ console.log(args)
   return success;
 }
 
+// Mint the NFT (user initiated)
+export async function mintNft(id) {
+  let success = false;
+
+  const args = {
+    proposal: {
+      description: `MintRoot. ID: : ${id}`,
+      kind: {
+        MintRoot: {
+          id: id
+        }
+      }
+    }
+  };
+
+console.table(args);
+
+  const gas = 100000000000000;
+  const amount = utils.format.parseNearAmount("1");
+
+  await window.contract.add_proposal(args, gas, amount)
+    .then((msg) => {
+      console.log("Success! (MintRoot)", msg);
+      success = true;
+    })
+    .catch((err) => console.error(`There was an error while minting NFT. ID: ${id}`, err));
+
+  return success;
+}
+
 // Add Artist to master group of the specific contract
 export async function registerUser(user, group) {
   let success = false;
@@ -212,7 +242,7 @@ export async function actOnProposal(proposalId) {
     action: "VoteApprove"
   }
 
-  const gas = 100000000000000;
+  const gas = 300000000000000;
 
   await window.contract.act_proposal(args, gas)
     .then((msg) => {

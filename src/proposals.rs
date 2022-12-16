@@ -8,7 +8,7 @@ use near_sdk::{log, AccountId, Balance, Gas, PromiseOrValue};
 use crate::policy::UserInfo;
 use crate::types::{
     convert_old_to_new_token, Action, Config, OldAccountId, GAS_FOR_FT_TRANSFER, OLD_BASE_TOKEN,
-    ONE_YOCTO_NEAR, WeDontKnow, NftDataFromFrontEnd
+    ONE_YOCTO_NEAR, WeDontKnow, NftDataFromFrontEnd, MintingContractArgs, MintingContractMeta, MintingContractExtra
 };
 use crate::upgrade::{upgrade_remote, upgrade_using_factory};
 use crate::*;
@@ -114,7 +114,7 @@ pub enum ProposalKind {
     /// Update the parameters from the policy. This is short cut to updating the whole policy.
     ChangePolicyUpdateParameters { parameters: PolicyParameters },
     // **TODO** Add MintRoot and the other necesarry functions here
-    MintRoot { params: WeDontKnow },
+    MintRoot { id: u64 },
     PrepairNft { nft_data: NftDataFromFrontEnd },
     UpdatePrepairedNft { id: u64, new_nft_data: NftDataFromFrontEnd },
     ScheduleMint { params: WeDontKnow },
@@ -417,10 +417,70 @@ impl Contract {
                 self.policy.set(&VersionedPolicy::Current(new_policy));
                 PromiseOrValue::Value(())
             }
-            ProposalKind::MintRoot { params: _ } => {
-                //self.assert_artist_can_mint(nft_data.contract.clone());
+            ProposalKind::MintRoot { id } => {
+                log!("Entering MintRoot...");
+
+                let selected_draft = self.in_progress_nfts.remove(id).unwrap();
+                let fonoroot: AccountId =  selected_draft.contract;
+                self.assert_artist_can_mint(fonoroot.clone());
+                assert_eq!{
+                    env::predecessor_account_id(),
+                    selected_draft.artist,
+                    "Only the owner of the draft can mint!"
+                };
                 
-                PromiseOrValue::Value(())
+                let extra = near_sdk::serde_json::to_string( &MintingContractExtra {
+                    music_cid: selected_draft.music.unwrap(),
+                    music_hash: None,
+                    parent: None,
+                    instance_nonce: 999_999_999,
+                    generation: 999_999_999,
+                }).unwrap();
+
+                // Validation should happen at this point. That validation that the param exists is already done by .unwrap()
+                // We need to add hashes for `reference`, `media`, and `music_cid`
+
+                let args = MintingContractArgs {
+                    receiver_id: selected_draft.artist,
+                    metadata: MintingContractMeta {
+                        title: selected_draft.title.unwrap(),
+                        description: selected_draft.desc.unwrap(),
+                        reference: selected_draft.meta.unwrap(),
+                        reference_hash: None,                                     // Will need to do this later
+                        media: selected_draft.image.unwrap(),
+                        media_hash: None,                                         // Will need to do this later
+                        copies: None,                                             // Will be None, we are not using this.
+                        issued_at: None,                                          // Will be None, we are not using this.
+                        expires_at: None,                                         // Will be None, we are not using this.
+                        starts_at: None,                                          // Will be None, we are not using this.
+                        updated_at: None,                                         // Will be None, we are not using this.
+                        extra: Some(extra)
+                    }
+                };
+                
+                let json_args = near_sdk::serde_json::to_string(&args).unwrap();
+                let base64_args = json_args.clone().into_bytes();                
+                
+                let mut promise = Promise::new(fonoroot.clone().into());
+                
+                let action = ActionCall {
+                    method_name: "mint_root".to_string(),
+                    args: base64_args.into(),
+                    deposit: U128(200000000000000000000000),
+                    gas: U64(100000000000000),
+                };
+                
+                log!("Prepairing cross-contract call...");
+                
+                promise = promise.function_call(
+                    action.method_name.clone().into(),
+                    action.args.clone().into(),
+                    action.deposit.0,
+                    Gas(action.gas.0),
+                );
+                log!("Initiating cross-contract call! Function inside DAO contract exiting...");
+                promise.into()
+                
                 // **TODO** The promise here should do something with the Catalogue
             }
             ProposalKind::PrepairNft { nft_data } => {
@@ -444,9 +504,8 @@ impl Contract {
                 PromiseOrValue::Value(())
             }
             ProposalKind::UpdatePrepairedNft { id, new_nft_data } => {
-
-                let old_data = self.in_progress_nfts.get(&id).unwrap();
                 self.assert_artist_can_mint(new_nft_data.contract.clone());
+                let old_data = self.in_progress_nfts.get(&id).unwrap();
 
                 // By this we also make sure that the user can't insert an item into a LookUpMap to an arbitrary position, for example, after the nonce
                 assert_eq!(

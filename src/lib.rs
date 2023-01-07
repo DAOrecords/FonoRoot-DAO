@@ -1,9 +1,9 @@
 use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
-use near_sdk::collections::{LazyOption, LookupMap, TreeMap};
+use near_sdk::collections::{LazyOption, LookupMap, UnorderedMap, TreeMap};
 use near_sdk::json_types::{Base58CryptoHash, U128};
 use near_sdk::serde::{Deserialize, Serialize};
 use near_sdk::{
-    env, ext_contract, near_bindgen, AccountId, Balance, BorshStorageKey, CryptoHash,
+    log, env, ext_contract, near_bindgen, AccountId, Balance, BorshStorageKey, CryptoHash,
     PanicOnDefault, Promise, PromiseResult,
 };
 
@@ -13,7 +13,7 @@ pub use crate::policy::{
 };
 use crate::proposals::VersionedProposal;
 pub use crate::proposals::{Proposal, ProposalInput, ProposalKind, ProposalStatus};
-pub use crate::types::{Action, Config, OldAccountId, OLD_BASE_TOKEN, InProgressMetadata, Catalogue, UniqId, IncomeTable};
+pub use crate::types::*;
 use crate::upgrade::{internal_get_factory_info, internal_set_factory_info, FactoryInfo};
 pub use crate::views::{BountyOutput, ProposalOutput};
 
@@ -44,6 +44,7 @@ pub enum StorageKeys {
 pub trait ExtSelf {
     /// Callback after proposal execution.
     fn on_proposal_callback(&mut self, proposal_id: u64) -> PromiseOrValue<()>;
+    fn mint_root_callback(&mut self, #[callback_result] result: Result<MintRootResult, near_sdk::PromiseError>, custom: AccountId);
 }
 
 #[near_bindgen]
@@ -94,7 +95,15 @@ pub struct Contract {
     pub catalogues: LookupMap<AccountId, Catalogue>,
 
     // **TODO** Implement Income Tables
-    pub income_tables:  TreeMap<UniqId, IncomeTable>,
+    pub income_tables:  TreeMap<TreeIndex, IncomeTable>,
+
+    // **TODO** We might do this, but not sure yet. The original problem is, Key in TreeMap can't be string.
+    // This way we would have an iterable, ordered collection of all the NFTs, but we couldn't point to an element by contract+root_id, but with this helper, we could
+    // We could call it uniq_id_to_tree_index
+    pub uniq_id_to_tree_index: UnorderedMap<UniqId, TreeIndex>,           //UniqIdStore
+
+    // **TODO** It gets even more complicated, because we need a nonce as well.
+    pub tree_index: TreeIndex,
 }
 
 #[near_bindgen]
@@ -118,8 +127,9 @@ impl Contract {
             in_progress_nfts: LookupMap::new(StorageKeys::InProgressNfts),
             in_progress_nonce: 0,
             catalogues: LookupMap::new(StorageKeys::Catalogues),
-            income_tables: TreeMap::new(b"t")
-            
+            income_tables: TreeMap::new(b"t"),
+            uniq_id_to_tree_index: UnorderedMap::new(b"m"),
+            tree_index: 0,
         };
         internal_set_factory_info(&FactoryInfo {
             factory_id: env::predecessor_account_id(),
@@ -168,6 +178,63 @@ impl Contract {
         // 4. Log the result of the test
         //    -> "Ok"
         //    -> "Unauthorized"
+    }
+
+    /// Callback for MintRoot, this function will create the IncomeTable entry
+    #[private]
+    pub fn mint_root_callback(
+        &mut self, 
+        #[callback_result] result: Result<MintRootResult, near_sdk::PromiseError>,
+        custom: AccountId   // most likely custom could be renamed to anything. It's safer to use this instead of env::signer_account_id()
+    ) {
+        // If the entry exists in IncomeTable, that means that the NFT exists. 
+        // This is the single-point-of-truth, IncomeTable could be iterated for example to get a list of NFTs
+
+        if result.is_err() {
+            env::log_str("Error.");
+            //panic_str!("Error.");
+            //false
+        }
+
+        let mint_root_result: MintRootResult = result.unwrap();
+
+        log!("Mint Root Callback. All good.");
+        log!("Custom: {:?}", custom.clone());
+        log!("Contract: {:?}", mint_root_result.contract);
+        log!("RootID: {:?}", mint_root_result.root_id);
+        log!("Predecessor account ID: {:?}", env::predecessor_account_id());
+        log!("Signer account ID: {:?}", env::signer_account_id());
+        let uniq_id = format!("{}-{}", mint_root_result.contract, mint_root_result.root_id);
+        log!("Uniq ID: {:?}", uniq_id);
+
+        let new_income_table = IncomeTable {
+            total_income: 0,
+            current_balance: 0,
+            root_id: mint_root_result.root_id,
+            contract: mint_root_result.contract,
+            owner: custom.clone(),
+        };
+
+        // !! Be carefull not to wipe the total_income by somehow tricking the contract into believing that this is a new RootNFT, when it isn't!
+        //UniqId::new(mint_root_result.contract, mint_root_result.root_id);
+
+        self.uniq_id_to_tree_index.insert(&uniq_id, &self.tree_index);
+        self.income_tables.insert(&self.tree_index, &new_income_table);
+        
+        // Get existing catalogue for artist, or create a new one
+        let mut catalogue_for_owner = self.catalogues.get(&custom).unwrap_or_else(|| -> Catalogue {
+            Catalogue::new(b"m")
+            // probably it would be good if we wouldn't repeat this init param
+        });
+        log!("Catalogue for owner: {:?}", catalogue_for_owner);
+        // Insert an empty entry for the newly minted song
+        catalogue_for_owner.insert(&self.tree_index, &None);
+        log!("Catalogue for owner after insert: {:?}", catalogue_for_owner);
+        // Insert back the catalogue to the artist
+        self.catalogues.insert(&custom, &catalogue_for_owner);
+        
+        self.tree_index = self.tree_index + 1;
+        //true
     }
 }
 

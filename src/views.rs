@@ -1,6 +1,7 @@
 use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
-
+use crate::types::*;
 use std::cmp::min;
+use std::ops::Bound;
 
 use crate::*;
 
@@ -105,6 +106,29 @@ impl Contract {
             })
             .collect()
     }
+
+    /// List CatalogueEntries for an artist's catalogue
+    pub fn get_catalogue(&self, artist: AccountId) -> Vec<(TreeIndex, Option<CatalogueEntry>)> {
+        let x = self.catalogues.contains_key(&artist);
+        log!("contains key: {:?}", x);
+        let catalogue_for_artist = self.catalogues.get(&artist).unwrap();
+        catalogue_for_artist.to_vec()
+    }
+
+    /// Get a single IncomeTable
+    pub fn get_single_income_table(&self, id: TreeIndex) -> IncomeTable {
+        self.income_tables.get(&id).unwrap()
+    }
+
+
+    /// List income tables, with possible limit
+    /*pub fn get_income_tables(&self, from_index: u64, limit: u64) -> Vec<TreeIndex, IncomeTable> {
+        self.income_tables.range((Bound::Included(0), Bound::Included(1)))
+            .collect::<Vec<(TreeIndex, IncomeTable)>>()
+        
+        //self.income_tables.iter(from_index, min(self.income_tables.len()-1, from_index + limit))
+            //.collect()
+    }*/
 
     /// Get specific proposal.
     pub fn get_proposal(&self, id: u64) -> ProposalOutput {

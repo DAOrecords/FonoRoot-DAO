@@ -40,6 +40,18 @@ async function getRealConfig(env) {
   }
 }
 
+/** This is for FonoRoot Minting contract calls (not the DAO contract) */
+const { providers } = nearAPI;
+// NEAR RPC
+const mainnetProvider = new providers.JsonRpcProvider(
+  "https://rpc.mainnet.near.org"
+);
+
+// NEAR testnet RPC
+const testnetProvider = new providers.JsonRpcProvider(
+  "https://rpc.testnet.near.org"
+)
+
 export async function getContractName() {
   const fetchObj = await fetch(window.location.origin + window.location.pathname + '/projectConfig.json')
   .then((response) => response.json())
@@ -57,7 +69,7 @@ export async function initContract() {
   window.accountId = window.walletConnection.getAccountId()                                // Getting the Account ID. If still unauthorized, it's just empty string
   
   window.contract = await new Contract(window.walletConnection.account(), nearConfig.contractName, {
-    viewMethods: ["get_policy", "get_last_proposal_id", "get_proposals", "get_in_progress_nfts"],
+    viewMethods: ["get_policy", "get_last_proposal_id", "get_proposals", "get_in_progress_nfts", "get_catalogue", "get_single_income_table"],
     changeMethods: ["add_proposal", "act_proposal"],
   })
 }
@@ -181,7 +193,7 @@ export async function mintNft(id) {
 
   const args = {
     proposal: {
-      description: `MintRoot. ID: : ${id}`,
+      description: `MintRoot. ID: ${id}`,
       kind: {
         MintRoot: {
           id: id
@@ -201,6 +213,37 @@ console.table(args);
       success = true;
     })
     .catch((err) => console.error(`There was an error while minting NFT. ID: ${id}`, err));
+
+  return success;
+}
+
+// Create Revenue Table
+export async function createRevenue(rootId, contract, revenueTable, price) {
+  let success = false;
+
+  const args = {
+    proposal: {
+      description: `Create Revenue Table for  uniqID: ${contract}-${rootId}`,
+      kind: {
+        CreateRevenueTable: {
+          id: rootId,
+          contract: contract,
+          unsafe_table: revenueTable,
+          price: utils.format.parseNearAmount(price)
+        }
+      }
+    }
+  };
+
+  const gas = 100000000000000;
+  const amount = utils.format.parseNearAmount("1");
+
+  await window.contract.add_proposal(args, gas, amount)
+    .then((msg) => {
+      console.log("Success! (Create Revenue Table)", msg);
+      success = true;
+    })
+    .catch((err) => console.error(`There was an error while creating the revenue table, uniqID ${contract}-${rootId}`, err));
 
   return success;
 }
@@ -304,6 +347,42 @@ export async function getListOfAllInProgressNfts() {
   return inProgressNfts;
 }
 
+// Get Catalogue for Artist
+export async function getCatalogue(artist) {
+  let catalogue = [];
+
+  const args = {
+    artist: artist
+  }
+
+  await window.contract.get_catalogue(args)
+    .then((listAsArray) => {
+      console.log(`Successfully got the Catalogue for ${artist}`, listAsArray);
+      catalogue = listAsArray;
+    })
+    .catch((err) => console.error(`There was an error while trying to fetch the Catalogue for ${artist}: ${err}`));
+
+  return catalogue;
+}
+
+// Fetch a single IncomeTable
+export async function getSingleIncomeTable(treeIndex) {
+  let incomeTable = null;
+
+  const args = {
+    id: treeIndex
+  }
+
+  await window.contract.get_single_income_table(args)
+    .then((iTable) => {
+      console.log(`Successfully got the IncomeTable for ${treeIndex}`, iTable);
+      incomeTable = iTable;
+    })
+    .catch((err) => console.error(`There was an error while trying to fetch IncomeTable for ${treeIndex}: ${err}`));
+
+  return incomeTable;
+}
+
 // Get policy objects
 export async function getListOfPolicyRoles() {
   let roles = [];
@@ -316,6 +395,27 @@ export async function getListOfPolicyRoles() {
     .catch((err) => console.error(`There was an error while trying to fetch the policy roles`, err));
 
     return roles;
+}
+
+// Get metadata for an NFT
+export async function getNftMetadata(contract, rootId) {
+  let result = null;
+
+  const provider = (mode === "development") ? testnetProvider : mainnetProvider; 
+  await provider.query({
+    request_type: "call_function",
+    account_id: contract,
+    method_name: "nft_token_details_for_list",
+    args_base64: btoa(JSON.stringify({ token_list: [ rootId ] })),
+    finality: "optimistic",
+  })
+    .then((rawResult) => {
+      const response = JSON.parse(Buffer.from(rawResult.result).toString());
+      result = response[0].metadata;
+    })
+    .catch((err) => console.error(`There was an error while trying to fetch metadata for ${rootId} on ${contract}`, err));
+
+  return result;
 }
 
 export function logout() {

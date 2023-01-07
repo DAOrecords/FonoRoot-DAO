@@ -8,7 +8,8 @@ use near_sdk::{log, AccountId, Balance, Gas, PromiseOrValue};
 use crate::policy::UserInfo;
 use crate::types::{
     convert_old_to_new_token, Action, Config, OldAccountId, GAS_FOR_FT_TRANSFER, OLD_BASE_TOKEN,
-    ONE_YOCTO_NEAR, WeDontKnow, NftDataFromFrontEnd, MintingContractArgs, MintingContractMeta, MintingContractExtra
+    ONE_YOCTO_NEAR, WeDontKnow, NftDataFromFrontEnd, MintingContractArgs, MintingContractMeta, MintingContractExtra,
+    RevenueTable, SalePriceInYoctoNear, TokenId
 };
 use crate::upgrade::{upgrade_remote, upgrade_using_factory};
 use crate::*;
@@ -117,6 +118,7 @@ pub enum ProposalKind {
     MintRoot { id: u64 },
     PrepairNft { nft_data: NftDataFromFrontEnd },
     UpdatePrepairedNft { id: u64, new_nft_data: NftDataFromFrontEnd },
+    CreateRevenueTable { id: TokenId,  contract: AccountId, unsafe_table: HashMap<AccountId, u64>, price: SalePriceInYoctoNear },
     ScheduleMint { params: WeDontKnow },
 }
 
@@ -147,6 +149,7 @@ impl ProposalKind {
             ProposalKind::MintRoot { .. } => "mint_root",
             ProposalKind::PrepairNft { .. } => "prepair_nft",
             ProposalKind::UpdatePrepairedNft { .. } => "update_prepaired_nft",
+            ProposalKind::CreateRevenueTable { .. } => "create_revenue_table",
             ProposalKind::ScheduleMint { .. } => "schedule_mint"
         }
     }
@@ -441,7 +444,7 @@ impl Contract {
                 // We need to add hashes for `reference`, `media`, and `music_cid`
 
                 let args = MintingContractArgs {
-                    receiver_id: selected_draft.artist,
+                    receiver_id: selected_draft.artist.clone(),
                     metadata: MintingContractMeta {
                         title: selected_draft.title.unwrap(),
                         description: selected_draft.desc.unwrap(),
@@ -477,11 +480,16 @@ impl Contract {
                     action.args.clone().into(),
                     action.deposit.0,
                     Gas(action.gas.0),
-                );
+                )
+                .then(ext_self::mint_root_callback(
+                    selected_draft.artist,
+                    env::current_account_id(),
+                    0,
+                    Gas(50000000000000)
+                ));
+                
                 log!("Initiating cross-contract call! Function inside DAO contract exiting...");
                 promise.into()
-                
-                // **TODO** The promise here should do something with the Catalogue
             }
             ProposalKind::PrepairNft { nft_data } => {
                 self.assert_artist_can_mint(nft_data.contract.clone());
@@ -530,7 +538,46 @@ impl Contract {
                 self.in_progress_nfts.insert(id, &updated_nft_data);
 
                 PromiseOrValue::Value(())
-            }
+            },
+            ProposalKind::CreateRevenueTable { id, contract, unsafe_table, price } => {
+                // create a revenue table for a RootNFT that was already created
+                let uniq_id = format!("{}-{}", contract, id);
+                let tree_index = self.uniq_id_to_tree_index.get(&uniq_id.clone()).unwrap();
+                let income_table = self.income_tables.get(&tree_index.clone()).unwrap();
+                
+                let revenue_table = RevenueTable::new(unsafe_table.clone()).unwrap();
+
+
+                log!("Uniq ID: {:?}", uniq_id.clone());
+                log!("Tree Index: {:?}", tree_index.clone());
+                log!("Income Table: {:?}", income_table.clone());
+                log!("Revenue Table from front end: {:?}", revenue_table);
+                log!("Price from front end: {:?}", price);
+                
+                // Prepair Revenue Entry
+                let mut catalogue_for_caller = self.catalogues.get(&env::signer_account_id()).unwrap();              // Has to exist. Otherwise, panic.
+                
+                // Validate that caller has the right to modify this entry / add new entry.
+                assert_eq!(
+                    income_table.owner,
+                    env::signer_account_id(),
+                    "Only the owner (Artist) can alter the revenue table!"
+                );
+                
+                // Update is not possible through this proposal
+                if catalogue_for_caller.get(&tree_index).is_none() {
+                    panic!("A Revenue Table already exists!");
+                }
+                
+                let new_entry = CatalogueEntry {
+                    revenue_table: revenue_table.clone(),
+                    price: price.clone()
+                };
+                catalogue_for_caller.insert(&tree_index, &Some(new_entry));
+                self.catalogues.insert(&env::signer_account_id(), &catalogue_for_caller);
+
+                PromiseOrValue::Value(())
+            },
             ProposalKind::ScheduleMint { params: _ } => {
                 //self.assert_artist_can_mint(nft_data.contract.clone());
 

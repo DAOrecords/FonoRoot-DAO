@@ -16,7 +16,7 @@ export default function TestPageFour() {
   }, []);
 
   useEffect(() => {
-    if (!selected) {
+    if (selected === null) {
       setReady(false);
       return;
     }
@@ -90,7 +90,11 @@ export default function TestPageFour() {
             {inProgressNfts.map((inProgressNft) => {
               const stringifiedNft = JSON.stringify(inProgressNft, null, "\t");
               return (
-                <li key={inProgressNft.id} onClick={() => setSelected(inProgressNfts.findIndex((cur) => cur.id === inProgressNft.id))} className="inProgressListElement">
+                <li 
+                  key={inProgressNft.id} 
+                  onClick={() => setSelected(inProgressNfts.findIndex((cur) => cur.id === inProgressNft.id))} 
+                  className="inProgressListElement"
+                >
                   <br></br>
                   <code>{stringifiedNft}</code>
                   <br></br>
@@ -100,7 +104,7 @@ export default function TestPageFour() {
           </ul>
         </section>
 
-        {selected && <section style={{ background: ready ? "#00FF00" : "#FF0000" }}>
+        {(selected !== null) && <section style={{ background: ready ? "#00FF00" : "#FF0000" }}>
           <h3>{"Selected for Minting: "}</h3>
           <p><strong>{"Title: "}</strong>{inProgressNfts[selected].title}</p>
           <p><strong>{"Description: "}</strong>{inProgressNfts[selected].desc}</p>

@@ -1,4 +1,4 @@
 {
-  "test": "MotherContractTest-quorum",
-  "contractName": "mother-contract-test-2.soundsplash.testnet"
+  "test": "MotherContractTest-AVLtree",
+  "contractName": "mother-contract-test-3.soundsplash.testnet"
 }

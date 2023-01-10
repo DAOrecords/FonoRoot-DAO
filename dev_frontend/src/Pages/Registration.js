@@ -12,6 +12,7 @@ export default function TestPageOne() {
   const [proposalId, setProposalId] = useState(null);
   const [masterGroups, setMasterGroups] = useState([]);
   const [message, setMessage] = useState("");
+  const [readyForVote, setReadyForVote] = useState(false);  
 
   // Create proposal for Registration
   async function createProposal() {
@@ -24,7 +25,10 @@ export default function TestPageOne() {
     localStorage.setItem("last_proposal_id", lastProposalId);
     localStorage.setItem("group_name_when_registering", GroupName);
 
-    registerUser(newUser, GroupName);
+    const returnedProposalID = await registerUser(newUser, GroupName);
+    localStorage.setItem("last_proposal_id", returnedProposalID);
+    setProposalId(returnedProposalID);
+    setReadyForVote(true);
   }
 
   // Act on proposal for the Registration of New User
@@ -89,11 +93,11 @@ export default function TestPageOne() {
           {resultVisible && (
             <div>
               <p>
-                <strong>This user would be added: </strong>
+                <strong>This user will be added: </strong>
                 <code>{newUser}</code>
               </p>
               <p>
-                <strong>User would be added to this group: </strong>
+                <strong>User will be added to this group: </strong>
                 <code>{groupName}</code>
               </p>
             </div>
@@ -101,6 +105,7 @@ export default function TestPageOne() {
         </section>
 
         <section>
+          {readyForVote && <p className="finalizeMessage">You can click on finalize now!</p>}
           <p>{"We will need to act on the proposal that we've just created. For that, we need the "}<code>{"last_proposal_id"}</code>{", and we need to get the proposals from that index, or from before that index, let's say 10."}</p>
           <p>{"We need to find that proposal that we've just created."}</p>
           <p>{"Last proposal ID: "} {localStorage.getItem("last_proposal_id")}</p>

@@ -9,6 +9,7 @@ export default function TestPageFour() {
   const [ready, setReady] = useState(false);
   const [message, setMessage] = useState("");
   const [proposalId, setProposalId] = useState(null);
+  const [readyForVote, setReadyForVote] = useState(false);
 
   useEffect(async () => {
     const list = await getListOfAllInProgressNfts();
@@ -45,7 +46,10 @@ export default function TestPageFour() {
     localStorage.setItem("last_proposal_id", lastProposalId);
     localStorage.setItem("in_progress_id", selectedForMinting.id);
 
-    mintNft(selectedForMinting.id);
+    const returnedProposalID = await mintNft(selectedForMinting.id);
+    localStorage.setItem("last_proposal_id", returnedProposalID);
+    setProposalId(returnedProposalID);
+    setReadyForVote(true);
   }
 
   // This useEffect is setting the proposalId, for finalizing
@@ -120,6 +124,7 @@ export default function TestPageFour() {
         </section>
 
         <section>
+          {readyForVote && <p className="finalizeMessage">You can click on finalize now!</p>}
           <p>{"We will need to act on the proposal that we've just created. See Registration"}</p>
           <p>{"Last proposal ID: "} {localStorage.getItem("last_proposal_id")}</p>
           <p>{"The ID of the proposal that we want to act on should be: "}<code>{proposalId}</code></p>

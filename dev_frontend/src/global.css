@@ -133,3 +133,8 @@ a {
 .revenueTableEntrySelected {
   background-color: yellow;
 }
+
+.finalizeMessage {
+  font-weight: bold;
+  color: greenyellow;
+}

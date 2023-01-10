@@ -76,7 +76,7 @@ export async function initContract() {
 
 // Create (master) group
 export async function createGroup(group) {
-  let success = false;
+  let proposalId = -1;
   const args = {
     proposal: {
       description: "Create Master Group",
@@ -103,16 +103,16 @@ export async function createGroup(group) {
   }
 
   const gas = 100000000000000;
-  const amount = utils.format.parseNearAmount("1");
+  const amount = utils.format.parseNearAmount("0");
 
   await window.contract.add_proposal(args, gas, amount)
     .then((msg) => { 
       console.log("Success! (Create new Master Group)", msg); 
-      success = true;
+      proposalId = msg;
     })
     .catch((err) => console.error(`There was an error while trying to create new Master Group ${group}: `, err));
   
-  return success;
+  return proposalId;
 }
 
 // Prepair Data (create new entry in `in_progress_nfts`)
@@ -138,11 +138,11 @@ export async function prepairNft(newNftDetails) {
   };
 
   const gas = 100000000000000;
-  const amount = utils.format.parseNearAmount("1");
+  const amount = utils.format.parseNearAmount("0");
   
   await window.contract.add_proposal(args, gas, amount)
     .then((id) => {
-      console.log("Success! (Prepair NFT)", msg);
+      console.log("Success! (Prepair NFT)", id);
       // not good, will not get ID this way (otherwise working)
       inProgressID = id;
     })
@@ -153,7 +153,7 @@ export async function prepairNft(newNftDetails) {
 
 // Update Data (overwrite an entry in `in_progress_nfts`)
 export async function updateNft(id, updatedNftDetails) {
-  let success = false;
+  let proposalId = false;
 
   const args = {
     proposal: {
@@ -173,23 +173,23 @@ export async function updateNft(id, updatedNftDetails) {
       }
     }
   };
-console.log(args)
+
   const gas = 100000000000000;
-  const amount = utils.format.parseNearAmount("1");
+  const amount = utils.format.parseNearAmount("0");
 
   await window.contract.add_proposal(args, gas, amount)
     .then((msg) => {
       console.log("Success! (Updating NFT)", msg);
-      success = true;
+      proposalId = msg;
     })
     .catch((err) => console.error(`There was an error while updating NFT data. ID: ${id}`, err));
 
-  return success;
+  return proposalId;
 }
 
 // Mint the NFT (user initiated)
 export async function mintNft(id) {
-  let success = false;
+  let proposalId = -1;
 
   const args = {
     proposal: {
@@ -202,24 +202,22 @@ export async function mintNft(id) {
     }
   };
 
-console.table(args);
-
   const gas = 100000000000000;
-  const amount = utils.format.parseNearAmount("1");
+  const amount = utils.format.parseNearAmount("0");
 
   await window.contract.add_proposal(args, gas, amount)
     .then((msg) => {
       console.log("Success! (MintRoot)", msg);
-      success = true;
+      proposalId = msg;
     })
     .catch((err) => console.error(`There was an error while minting NFT. ID: ${id}`, err));
 
-  return success;
+  return proposalId;
 }
 
 // Create Revenue Table
 export async function createRevenue(rootId, contract, revenueTable, price) {
-  let success = false;
+  let proposalId = -1;
 
   const args = {
     proposal: {
@@ -236,21 +234,21 @@ export async function createRevenue(rootId, contract, revenueTable, price) {
   };
 
   const gas = 100000000000000;
-  const amount = utils.format.parseNearAmount("1");
+  const amount = utils.format.parseNearAmount("0");
 
   await window.contract.add_proposal(args, gas, amount)
     .then((msg) => {
       console.log("Success! (Create Revenue Table)", msg);
-      success = true;
+      proposalId = msg;
     })
     .catch((err) => console.error(`There was an error while creating the revenue table, uniqID ${contract}-${rootId}`, err));
 
-  return success;
+  return proposalId;
 }
 
 // Alter Revenue Table
 export async function alterRevenue(treeIndex, revenueTable, price) {
-  let success = false;
+  let proposalId = -1;
 
   const args = {
     proposal: {
@@ -266,21 +264,21 @@ export async function alterRevenue(treeIndex, revenueTable, price) {
   };
 
   const gas = 100000000000000;
-  const amount = utils.format.parseNearAmount("1");
+  const amount = utils.format.parseNearAmount("0");
 
   await window.contract.add_proposal(args, gas, amount)
     .then((msg) => {
       console.log("Success! (Alter Revenue Table)", msg);
-      success = true;
+      proposalId = msg;
     })
     .catch((err) => console.error(`There was an error while altering the revenue table, treeIndex ${treeIndex}`, err));
 
-  return success;
+  return proposalId;
 }
 
 // Add Artist to master group of the specific contract
 export async function registerUser(user, group) {
-  let success = false;
+  let proposalId = -1;
   const args = {
     proposal: {
       description: "Add Artist to master group (or collab to collab group)",
@@ -294,16 +292,16 @@ export async function registerUser(user, group) {
   }
 
   const gas = 100000000000000;
-  const amount = utils.format.parseNearAmount("1");
+  const amount = utils.format.parseNearAmount("0");
 
   await window.contract.add_proposal(args, gas, amount)
     .then((msg) => { 
       console.log("Success! (Add user to group)", msg); 
-      success = true; 
+      proposalId = msg; 
     })
     .catch((err) => console.error(`There was an error while trying to add ${user} to ${group}: `, err));
   
-  return success;
+  return proposalId;
 }
 
 // Act on Proposal
@@ -315,7 +313,7 @@ export async function actOnProposal(proposalId) {
     action: "VoteApprove"
   }
 
-  const gas = 300000000000000;
+  const gas = 250000000000000;
 
   await window.contract.act_proposal(args, gas)
     .then((msg) => {

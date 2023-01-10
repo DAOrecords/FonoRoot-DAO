@@ -8,6 +8,7 @@ export default function CreateGroup() {
   const [proposalId, setProposalId] = useState(null);
   const [masterGroups, setMasterGroups] = useState([]);
   const [message, setMessage] = useState("");
+  const [readyForVote, setReadyForVote] = useState(false);
 
   async function createNewGroupProposal() {
     const isMaster = true;
@@ -18,7 +19,10 @@ export default function CreateGroup() {
     localStorage.setItem("last_proposal_id", lastProposalId);
     localStorage.setItem("name_of_the_new_group", groupName);
 
-    createGroup(groupName);
+    const returnedProposalID = await createGroup(groupName);
+    localStorage.setItem("last_proposal_id", returnedProposalID);
+    setProposalId(returnedProposalID);
+    setReadyForVote(true);
   }
 
   // Act on proposal for the Creation of New Group
@@ -81,6 +85,7 @@ export default function CreateGroup() {
         </section>
 
         <section>
+          {readyForVote && <p className="finalizeMessage">You can click on finalize now!</p>}
           <p>{"We will need to act on the proposal that we've just created. For that, we need the "}<code>{"last_proposal_id"}</code>{", and we need to get the proposals from that index, or from before that index, let's say 10."}</p>
           <p>{"We need to find that proposal that we've just created."}</p>
           <p>{"Last proposal ID: "} {localStorage.getItem("last_proposal_id")}</p>

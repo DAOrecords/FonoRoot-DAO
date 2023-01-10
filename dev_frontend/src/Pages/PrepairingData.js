@@ -13,6 +13,7 @@ export default function TestPageTwo() {
   const [proposalId, setProposalId] = useState(null);
   const [inProgressNfts, setInProgressNfts] = useState([]);
   const [message, setMessage] = useState("");
+  const [readyForVote, setReadyForVote] = useState(false);
 
   async function saveData() {
     const newNftDetails = {
@@ -28,8 +29,11 @@ export default function TestPageTwo() {
     localStorage.setItem("last_proposal_id", lastProposalId);
     localStorage.setItem("nft_title_when_prepairing", title);
 
-    prepairNft(newNftDetails);
-    // save ID somehow
+    const returnedProposalID = await prepairNft(newNftDetails);
+    localStorage.setItem("last_proposal_id", returnedProposalID);
+    localStorage.setItem("nft_title_when_prepairing", title);
+    setProposalId(returnedProposalID);
+    setReadyForVote(true);
   }
 
   // Act on proposal for the Creation of New Group
@@ -106,6 +110,7 @@ export default function TestPageTwo() {
         </section>
 
         <section>
+          {readyForVote && <p className="finalizeMessage">You can click on finalize now!</p>}
           <p>{"We will need to act on the proposal that we've just created. For that, we need the "}<code>{"last_proposal_id"}</code>{", and we need to get the proposals from that index, or from before that index, let's say 10."}</p>
           <p>{"We need to find that proposal that we've just created."}</p>
           <p>{"Last proposal ID: "} {localStorage.getItem("last_proposal_id")}</p>

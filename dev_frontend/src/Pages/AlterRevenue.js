@@ -17,6 +17,7 @@ export default function TestPageSix() {
     { account: "recordpooldao.sputnik-dao.near", percent: 500 }
   ]);  
   const [price, setPrice] = useState(0);
+  const [readyForVote, setReadyForVote] = useState(false);
 
   async function initiateAlterRevenue() {
     if (selected === null)  { console.log("No entry is selected."); return; }
@@ -33,7 +34,10 @@ export default function TestPageSix() {
       return;
     });
 
-    alterRevenue(treeIndex, rTable, price);
+    const returnedProposalID = await alterRevenue(treeIndex, rTable, price);
+    localStorage.setItem("last_proposal_id", returnedProposalID);
+    setProposalId(returnedProposalID);
+    setReadyForVote(true);
   }
 
   // This useEffect is for filling in all the info in the list, like Title, Contract, RootId
@@ -209,6 +213,7 @@ export default function TestPageSix() {
         </section>
 
         <section>
+          {readyForVote && <p className="finalizeMessage">You can click on finalize now!</p>}
           <p>{"We will need to act on the proposal that we've just created. See Registration"}</p>
           <p>{"Last proposal ID: "} {localStorage.getItem("last_proposal_id")}</p>
           <p>{"The ID of the proposal that we want to act on should be: "}<code>{proposalId}</code></p>

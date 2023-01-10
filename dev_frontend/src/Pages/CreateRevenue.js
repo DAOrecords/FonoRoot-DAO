@@ -16,14 +16,14 @@ export default function TestPageFive() {
     { account: "recordpooldao.sputnik-dao.near", percent: 500 }
   ]);  
   const [price, setPrice] = useState(0);
+  const [readyForVote, setReadyForVote] = useState(false);
 
   async function initiateCreateRevenue() {
-    if (false)  { console.log("Random message."); return; }
+    if (!selected)  { console.log("Nothing is selected."); return; }
 
     const { treeIndex, contract, rootId, title} = metaList[selected];
     const lastProposalId = await getLastProposalId();
     localStorage.setItem("last_proposal_id", lastProposalId);
-    // non-unique id
     localStorage.setItem("last_root_id", rootId);
 
     let rTable = {};
@@ -32,40 +32,22 @@ export default function TestPageFive() {
       return;
     });
 
-    createRevenue(rootId, contract, rTable, price);
+    const returnedProposalID = await createRevenue(rootId, contract, rTable, price);
+    localStorage.setItem("last_proposal_id", returnedProposalID);
+    setProposalId(returnedProposalID);
+    setReadyForVote(true);
   }
 
   // This useEffect is setting the proposalId, for finalizing
   // There is a known bug, when the operation is not finished.
   useEffect(async () => {
-//TEST
-const MyCatalogue = await getCatalogue(window.accountId);
-console.table("my catalogue", MyCatalogue)
-
     let catalogue = await getCatalogue(window.accountId);
     let emptyCatalogueEntries = catalogue.filter((entry) => {
       return entry[1] === null;
     });
     setWithoutRevenueTable(emptyCatalogueEntries);
 
-    const index = localStorage.getItem("last_proposal_id");setProposalId(parseInt(index));/* - 2;
-    const savedId = localStorage.getItem("last_root_id");
-    const proposalList = await getListOfProposals(index);
-    console.log("proposalList: ", proposalList);
-
-    const inProgressProposals = proposalList.filter((proposalEntry) => proposalEntry.status === "InProgress");
-    console.log("inProgressProposal: ", inProgressProposals);
-    if (inProgressProposals.length === 0) return;
-
-    const createRevenueKindProposals = inProgressProposals.filter((proposalEntry) => proposalEntry.kind.hasOwnProperty("CreateRevenueTable"));
-    console.log("createRevenueKindProposals: ", createRevenueKindProposals);
-
-    const i = createRevenueKindProposals.findIndex((proposalEntry) => proposalEntry.kind.CreateRevenueTable.id === savedId);
-    console.log("the Entry: ", createRevenueKindProposals[i]);
-
-    const theId = createRevenueKindProposals[i].id;
-    setProposalId(theId);*/
-
+    const index = localStorage.getItem("last_proposal_id");setProposalId(parseInt(index));
   }, []);  
 
   
@@ -218,6 +200,7 @@ console.table("my catalogue", MyCatalogue)
         </section>
 
         <section>
+          {readyForVote && <p className="finalizeMessage">You can click on finalize now!</p>}
           <p>{"We will need to act on the proposal that we've just created. See Registration"}</p>
           <p>{"Last proposal ID: "} {localStorage.getItem("last_proposal_id")}</p>
           <p>{"The ID of the proposal that we want to act on should be: "}<code>{proposalId}</code></p>

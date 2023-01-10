@@ -14,6 +14,7 @@ export default function TestPageThree() {
   const [inProgressNfts, setInProgressNfts] = useState([]);
   const [inProgressID, setInProgressID] = useState(null);
   const [message, setMessage] = useState("");
+  const [readyForVote, setReadyForVote] = useState(false);
 
   async function saveData() {
     const updatedNftDetails = {
@@ -29,7 +30,10 @@ export default function TestPageThree() {
     localStorage.setItem("last_proposal_id", lastProposalId);
     localStorage.setItem("in_progress_id", inProgressID);
     
-    updateNft(inProgressID, updatedNftDetails);
+    const returnedProposalID = await updateNft(inProgressID, updatedNftDetails);
+    localStorage.setItem("last_proposal_id", returnedProposalID);
+    setProposalId(returnedProposalID);
+    setReadyForVote(true);
   }
 
   // Act on proposal for the Update Data
@@ -129,6 +133,7 @@ export default function TestPageThree() {
 
 
         <section>
+          {readyForVote && <p className="finalizeMessage">You can click on finalize now!</p>}
           <p>{"We will need to act on the proposal that we've just created. For that, we need the "}<code>{"last_proposal_id"}</code>{", and we need to get the proposals from that index, or from before that index, let's say 10."}</p>
           <p>{"We need to find that proposal that we've just created."}</p>
           <p>{"Last proposal ID: "} {localStorage.getItem("last_proposal_id")}</p>

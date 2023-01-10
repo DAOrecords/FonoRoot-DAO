@@ -112,3 +112,24 @@ a {
   width: 0;
   height: 0;
 }
+
+#revenueTableList {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.revenueTableEntry {
+  border: 1px solid purple;
+  background-color: palegreen;
+  margin-bottom: 8px;
+  padding-left: 8px;
+  padding-bottom: 8px;
+}
+.revenueTableEntry:hover {
+  border: 2px solid purple;
+}
+
+.revenueTableEntrySelected {
+  background-color: yellow;
+}

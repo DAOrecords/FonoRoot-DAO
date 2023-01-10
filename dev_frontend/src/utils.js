@@ -248,6 +248,36 @@ export async function createRevenue(rootId, contract, revenueTable, price) {
   return success;
 }
 
+// Alter Revenue Table
+export async function alterRevenue(treeIndex, revenueTable, price) {
+  let success = false;
+
+  const args = {
+    proposal: {
+      description: `Alter Revenue Table for treeIndex: ${treeIndex}`,
+      kind: {
+        AlterRevenueTable: {
+          tree_index: treeIndex,
+          unsafe_table: revenueTable,
+          price: utils.format.parseNearAmount(price)
+        }
+      }
+    }
+  };
+
+  const gas = 100000000000000;
+  const amount = utils.format.parseNearAmount("1");
+
+  await window.contract.add_proposal(args, gas, amount)
+    .then((msg) => {
+      console.log("Success! (Alter Revenue Table)", msg);
+      success = true;
+    })
+    .catch((err) => console.error(`There was an error while altering the revenue table, treeIndex ${treeIndex}`, err));
+
+  return success;
+}
+
 // Add Artist to master group of the specific contract
 export async function registerUser(user, group) {
   let success = false;

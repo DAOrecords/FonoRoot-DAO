@@ -36,6 +36,7 @@ export default function TestPageFive() {
   }
 
   // This useEffect is setting the proposalId, for finalizing
+  // There is a known bug, when the operation is not finished.
   useEffect(async () => {
 //TEST
 const MyCatalogue = await getCatalogue(window.accountId);

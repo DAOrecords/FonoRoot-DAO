@@ -119,6 +119,7 @@ pub enum ProposalKind {
     PrepairNft { nft_data: NftDataFromFrontEnd },
     UpdatePrepairedNft { id: u64, new_nft_data: NftDataFromFrontEnd },
     CreateRevenueTable { id: TokenId,  contract: AccountId, unsafe_table: HashMap<AccountId, u64>, price: SalePriceInYoctoNear },
+    AlterRevenueTable { tree_index: TreeIndex, unsafe_table: HashMap<AccountId, u64>, price: SalePriceInYoctoNear }, 
     ScheduleMint { params: WeDontKnow },
 }
 
@@ -150,6 +151,7 @@ impl ProposalKind {
             ProposalKind::PrepairNft { .. } => "prepair_nft",
             ProposalKind::UpdatePrepairedNft { .. } => "update_prepaired_nft",
             ProposalKind::CreateRevenueTable { .. } => "create_revenue_table",
+            ProposalKind::AlterRevenueTable { .. }  => "alter_revenue_table",
             ProposalKind::ScheduleMint { .. } => "schedule_mint"
         }
     }
@@ -540,7 +542,7 @@ impl Contract {
                 PromiseOrValue::Value(())
             },
             ProposalKind::CreateRevenueTable { id, contract, unsafe_table, price } => {
-                // create a revenue table for a RootNFT that was already created
+                // Create a revenue table for a RootNFT that was already created
                 let uniq_id = format!("{}-{}", contract, id);
                 let tree_index = self.uniq_id_to_tree_index.get(&uniq_id.clone()).unwrap();
                 let income_table = self.income_tables.get(&tree_index.clone()).unwrap();
@@ -578,6 +580,39 @@ impl Contract {
 
                 PromiseOrValue::Value(())
             },
+            ProposalKind::AlterRevenueTable { tree_index, unsafe_table, price } => {
+                // Update a revenue table for a RootNFT
+                log!("Hello from Alter Revenue Table!");
+                log!("TreeIndex: {:?}", tree_index);
+
+                let new_revenue_table = RevenueTable::new(unsafe_table.clone()).unwrap();
+                let income_table = self.income_tables.get(&tree_index.clone()).unwrap();
+                log!("The new Revenue Table from front end: {:?}", new_revenue_table);
+                log!("Income Table: {:?}", income_table.clone());
+                log!("New price: {:?}", price);
+
+                // Prepair Revenue Entry
+                let mut catalogue_for_caller = self.catalogues.get(&env::signer_account_id()).unwrap();              // Has to exist. Otherwise, panic.
+                
+                // Validate that caller has the right to modify this entry / add new entry.
+                assert_eq!(
+                    income_table.owner,
+                    env::signer_account_id(),
+                    "Only the owner (Artist) can alter the revenue table!"
+                );
+
+                let new_entry = CatalogueEntry {
+                    revenue_table: new_revenue_table.clone(),
+                    price: price.clone()
+                };
+
+                catalogue_for_caller.insert(&tree_index, &Some(new_entry));
+                self.catalogues.insert(&env::signer_account_id(), &catalogue_for_caller);
+
+                log!("New RevenueTable entry was inserted: {:?}", self.catalogues.get(&env::signer_account_id()).unwrap());
+
+                PromiseOrValue::Value(())
+            }
             ProposalKind::ScheduleMint { params: _ } => {
                 //self.assert_artist_can_mint(nft_data.contract.clone());
 

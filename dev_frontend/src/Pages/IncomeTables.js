@@ -34,8 +34,12 @@ export default function IncomeTables() {
                 <p><i>{"Contract: "}</i>{IncomeTable[1].contract}</p>
                 <p><i>{"Root ID: "}</i>{IncomeTable[1].root_id}</p>
                 <p><i>{"Owner: "}</i>{IncomeTable[1].owner}</p>
-                <p><i>{"Current Balance: "}</i>{utils.format.formatNearAmount(BigInt(IncomeTable[1].current_balance), 2)}{" NEAR"}</p>
-                <p><i>{"Total Income: "}</i>{utils.format.formatNearAmount(BigInt(IncomeTable[1].total_income), 2)}{" NEAR"}</p>
+                <p><i>{"Current Balance: "}</i>
+                  {(IncomeTable[1].current_balance === 0) ? "0" : utils.format.formatNearAmount(BigInt(IncomeTable[1].current_balance), 2)}{" NEAR"}
+                </p>
+                <p><i>{"Total Income: "}</i>
+                  {(IncomeTable[1].total_income === 0) ? "0" : utils.format.formatNearAmount(BigInt(IncomeTable[1].total_income), 2)}{" NEAR"}
+                </p>
               </li>
             ))}
           </ul>

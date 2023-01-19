@@ -1,7 +1,7 @@
 import { utils } from 'near-api-js';
 import React, { useState, useEffect } from 'react';
 import Nav from '../Nav';
-import { buyNFT, getCatalogue, getListOfIncomeTables, getNftMetadata, getPrice, getSingleIncomeTable } from '../utils';
+import { buyNFT, getListOfIncomeTables, getNftMetadata } from '../utils';
 
 
 export default function Buy() {
@@ -16,17 +16,12 @@ export default function Buy() {
 
   // This useEffect is for filling in all the info in the list, like Title, Contract, RootId
   useEffect(async () => {
-    console.table("Catalogue: ", incomeTables);
     if (incomeTables.length === 0) return;
     
     Promise.all(
       incomeTables.map(async (incomeTable) => {
         try {
           const meta = await getNftMetadata(incomeTable[1].contract, incomeTable[1].root_id);
-          /*const catalogue = await getCatalogue(incomeTable[1].owner);
-          const ind = catalogue.findIndex((catEntry) => catEntry[0] === incomeTable[0]);
-          const catalogueEntry = catalogue[ind][1];
-          const price = catalogueEntry.price;*/
           return { meta: meta, contract: incomeTable[1].contract, root_id: incomeTable[1].root_id, price: incomeTable[1].price};
         } catch (err) {
           return console.error(`getNftMetadata errored, contract is ${incomeTable[1].contract} and rootId is ${incomeTable[1].root_id}`, err);
@@ -58,14 +53,14 @@ export default function Buy() {
 
         <section>
         <ul className="revenueList">
-            {metaList.map((entry, index) => (
-              <li key={entry.treeIndex} className="buyEntry">
+            {metaList.map((entry, index) => {
+              if (entry.price) return <li key={entry.treeIndex} className="buyEntry">
                 <button className="buyButton" onClick={() => buyNFT(entry.rootId, entry.contract, entry.price)}>
                   <p>{entry.title}</p>
                   <p>{utils.format.formatNearAmount(entry.price)}{" NEAR"}</p>
                 </button>
               </li>
-            ))}
+              })}
           </ul>
         </section>
 

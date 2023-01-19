@@ -35,14 +35,15 @@ pub enum ProposalStatus {
 }
 
 /// Function call arguments.
+// **WARNING** Everything was rewritten as pub
 #[derive(BorshSerialize, BorshDeserialize, Serialize, Deserialize)]
 #[cfg_attr(not(target_arch = "wasm32"), derive(Clone, Debug))]
 #[serde(crate = "near_sdk::serde")]
 pub struct ActionCall {
-    method_name: String,
-    args: Base64VecU8,
-    deposit: U128,
-    gas: U64,
+    pub method_name: String,
+    pub args: Base64VecU8,
+    pub deposit: U128,
+    pub gas: U64,
 }
 
 /// Function call arguments.
@@ -544,8 +545,16 @@ impl Contract {
             ProposalKind::CreateRevenueTable { id, contract, unsafe_table, price } => {
                 // Create a revenue table for a RootNFT that was already created
                 let uniq_id = format!("{}-{}", contract, id);
+                /*log!("Length: {}", self.uniq_id_to_tree_index.len());
+                for x in self.uniq_id_to_tree_index.values() {
+                    log!("Values: {}", x);
+                }
+                for y in self.uniq_id_to_tree_index.keys() {
+                    log!("Keys: {}", y);
+                }*/
                 let tree_index = self.uniq_id_to_tree_index.get(&uniq_id.clone()).unwrap();
-                let income_table = self.income_tables.get(&tree_index.clone()).unwrap();
+                //let tree_index = 0; There is a very serious error here, but we don't understand what it is ({"index":0,"kind":{"ExecutionError":"Smart contract panicked: Cannot deserialize value with Borsh"})
+                let mut income_table = self.income_tables.get(&tree_index.clone()).unwrap();
                 
                 let revenue_table = RevenueTable::new(unsafe_table.clone()).unwrap();
 
@@ -573,8 +582,9 @@ impl Contract {
                 
                 let new_entry = CatalogueEntry {
                     revenue_table: revenue_table.clone(),
-                    price: price.clone()
                 };
+                income_table.price = Some(price.clone());
+                self.income_tables.insert(&tree_index.clone(), &income_table);
                 catalogue_for_caller.insert(&tree_index, &Some(new_entry));
                 self.catalogues.insert(&env::signer_account_id(), &catalogue_for_caller);
 
@@ -586,7 +596,7 @@ impl Contract {
                 log!("TreeIndex: {:?}", tree_index);
 
                 let new_revenue_table = RevenueTable::new(unsafe_table.clone()).unwrap();
-                let income_table = self.income_tables.get(&tree_index.clone()).unwrap();
+                let mut income_table = self.income_tables.get(&tree_index.clone()).unwrap();
                 log!("The new Revenue Table from front end: {:?}", new_revenue_table);
                 log!("Income Table: {:?}", income_table.clone());
                 log!("New price: {:?}", price);
@@ -603,8 +613,8 @@ impl Contract {
 
                 let new_entry = CatalogueEntry {
                     revenue_table: new_revenue_table.clone(),
-                    price: price.clone()
                 };
+                income_table.price = Some(price.clone());
 
                 catalogue_for_caller.insert(&tree_index, &Some(new_entry));
                 self.catalogues.insert(&env::signer_account_id(), &catalogue_for_caller);
@@ -868,6 +878,7 @@ impl Contract {
             account_id: env::predecessor_account_id(),
             amount: 0
         };
+        // **TODO** should move policy.get() here
 
         for i in 0..self.policy.get().unwrap().to_policy().roles.len() {
             if &self.policy.get().unwrap().to_policy().roles[i].name == &master_group {

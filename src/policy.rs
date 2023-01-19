@@ -183,6 +183,8 @@ pub fn default_policy(council: Vec<AccountId>) -> Policy {
                 name: "all".to_string(),
                 kind: RoleKind::Everyone,
                 permissions: vec!["*:AddProposal".to_string()].into_iter().collect(),
+                // **TODO** This should be removed, and only added users should be able to add proposals, to avoid spam
+                // (We don't require the user to include a minimum deposit anymore.)
                 vote_policy: HashMap::default(),
             },
             RolePermission {

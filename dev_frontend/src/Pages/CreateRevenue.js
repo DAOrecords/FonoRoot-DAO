@@ -19,7 +19,7 @@ export default function TestPageFive() {
   const [readyForVote, setReadyForVote] = useState(false);
 
   async function initiateCreateRevenue() {
-    if (!selected)  { console.log("Nothing is selected."); return; }
+    if (selected === null)  { console.log("Nothing is selected."); return; }
 
     const { treeIndex, contract, rootId, title} = metaList[selected];
     const lastProposalId = await getLastProposalId();
@@ -166,9 +166,8 @@ export default function TestPageFive() {
         </section>}
 
         <section>
-          <p>{"Here we are creating a revenue table, similar way as in the Admin panel."}</p>
+          <p>{"Here we are creating a revenue table, similar way as in the old Admin panel."}</p>
           <p>{"The revenue table will be added to the selected NFT."}</p>
-          <p>{"Price should be here too."}</p>
           <label className="fieldName">{"Creator split  "}
             <button onClick={addNewRevenueEntry}>
               <img src={"plusButton"} alt={'+'}></img>

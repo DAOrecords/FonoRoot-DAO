@@ -1,10 +1,10 @@
 use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
 use near_sdk::collections::{LazyOption, LookupMap, UnorderedMap, TreeMap};
-use near_sdk::json_types::{Base58CryptoHash, U128};
+use near_sdk::json_types::{Base58CryptoHash, U128, U64};
 use near_sdk::serde::{Deserialize, Serialize};
 use near_sdk::{
     log, env, ext_contract, near_bindgen, AccountId, Balance, BorshStorageKey, CryptoHash,
-    PanicOnDefault, Promise, PromiseResult,
+    PanicOnDefault, Promise, PromiseResult, Gas
 };
 
 pub use crate::bounties::{Bounty, BountyClaim, VersionedBounty};
@@ -12,10 +12,11 @@ pub use crate::policy::{
     default_policy, Policy, RoleKind, RolePermission, VersionedPolicy, VotePolicy,
 };
 use crate::proposals::VersionedProposal;
-pub use crate::proposals::{Proposal, ProposalInput, ProposalKind, ProposalStatus};
+pub use crate::proposals::{Proposal, ProposalInput, ProposalKind, ProposalStatus, ActionCall};
 pub use crate::types::*;
 use crate::upgrade::{internal_get_factory_info, internal_set_factory_info, FactoryInfo};
 pub use crate::views::{BountyOutput, ProposalOutput};
+pub use crate::buy::*;
 
 mod bounties;
 mod delegation;
@@ -24,6 +25,7 @@ mod proposals;
 mod types;
 mod upgrade;
 pub mod views;
+pub mod buy;
 
 #[derive(BorshStorageKey, BorshSerialize)]
 pub enum StorageKeys {
@@ -36,7 +38,10 @@ pub enum StorageKeys {
     BountyClaimCounts,
     Blobs,
     Catalogues,
-    InProgressNfts
+    InProgressNfts,
+    IncomeTables,
+    UniqueIdToTreeIndex,
+    ArtistCatalogue(u64)
 }
 
 /// After payouts, allows a callback
@@ -45,6 +50,7 @@ pub trait ExtSelf {
     /// Callback after proposal execution.
     fn on_proposal_callback(&mut self, proposal_id: u64) -> PromiseOrValue<()>;
     fn mint_root_callback(&mut self, #[callback_result] result: Result<MintRootResult, near_sdk::PromiseError>, custom: AccountId);
+    fn buy_nft_callback(&mut self, #[callback_result] result: Result<bool, near_sdk::PromiseError>, tree_index: TreeIndex);
 }
 
 #[near_bindgen]
@@ -127,8 +133,8 @@ impl Contract {
             in_progress_nfts: LookupMap::new(StorageKeys::InProgressNfts),
             in_progress_nonce: 0,
             catalogues: LookupMap::new(StorageKeys::Catalogues),
-            income_tables: TreeMap::new(b"t"),
-            uniq_id_to_tree_index: UnorderedMap::new(b"m"),
+            income_tables: TreeMap::new(StorageKeys::IncomeTables),
+            uniq_id_to_tree_index: UnorderedMap::new(StorageKeys::UniqueIdToTreeIndex),
             tree_index: 0,
         };
         internal_set_factory_info(&FactoryInfo {
@@ -213,6 +219,7 @@ impl Contract {
             root_id: mint_root_result.root_id,
             contract: mint_root_result.contract,
             owner: custom.clone(),
+            price: None
         };
 
         // !! Be carefull not to wipe the total_income by somehow tricking the contract into believing that this is a new RootNFT, when it isn't!
@@ -223,8 +230,8 @@ impl Contract {
         
         // Get existing catalogue for artist, or create a new one
         let mut catalogue_for_owner = self.catalogues.get(&custom).unwrap_or_else(|| -> Catalogue {
-            Catalogue::new(b"m")
-            // probably it would be good if we wouldn't repeat this init param
+            // Obviously we will skip numbers, but that's not the point, the important thing is that there is no collision.
+            Catalogue::new(StorageKeys::ArtistCatalogue(self.tree_index))
         });
         log!("Catalogue for owner: {:?}", catalogue_for_owner);
         // Insert an empty entry for the newly minted song
@@ -235,7 +242,7 @@ impl Contract {
         
         self.tree_index = self.tree_index + 1;
         //true
-    }
+    }    
 }
 
 /// Stores attached data into blob store and returns hash of it.

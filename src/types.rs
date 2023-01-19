@@ -2,7 +2,7 @@ use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
 use near_sdk::json_types::{Base64VecU8, U128};
 use near_sdk::serde::{Deserialize, Serialize};
 use near_sdk::{AccountId, Balance, Gas, log};
-use near_sdk::collections::{LookupMap, UnorderedMap};
+use near_sdk::collections::{UnorderedMap};
 use std::collections::HashMap;
 
 /// Account ID used for $NEAR in near-sdk v3.
@@ -115,6 +115,12 @@ pub struct MintingContractArgs {
 
 }
 
+#[derive(BorshSerialize, BorshDeserialize, Serialize, Deserialize, Clone, Debug)]
+#[serde(crate = "near_sdk::serde")]
+pub struct BuyArgs {
+    pub root_id: TokenId
+}
+
 /// Exact copy of TokenMetadata, from Fono-Root (that is following the standard)
 #[derive(BorshSerialize, BorshDeserialize, Serialize, Deserialize, Debug)]
 #[serde(crate = "near_sdk::serde")]
@@ -165,7 +171,6 @@ pub type Catalogue = UnorderedMap<TreeIndex, Option<CatalogueEntry>>;
 #[serde(crate = "near_sdk::serde")]
 pub struct CatalogueEntry {
     pub revenue_table: RevenueTable,     // This is the revenue table that used to be part of the NFT in the FonoRoot contract
-    pub price: SalePriceInYoctoNear,
 }
 
 // We could easily get all the songs for a given Artist, BUT, how do we get all the songs that exist, in chronological order?
@@ -180,13 +185,10 @@ pub type WeDontKnow = String;
 pub struct IncomeTable {
     pub total_income: Balance,
     pub current_balance: Balance,
-    // Entries that will tell that this is X song in Y contract
     pub root_id: TokenId,
     pub contract: AccountId,
     pub owner: AccountId,
-    //is needed, because we need to know where to find it in the Catalogue. Problem with this: We can't move the Song to another Catalogue, or we have to be very carefull.
-    // Timestamp We don't need it, just important that the order does not change. Chronological order
-    // The way it will be payed out is dependent on the CatalogueTable, or on other table, so this is not dependent on User. This is independent, each song has it's own table.
+    pub price: Option<SalePriceInYoctoNear>,
 }
 
 

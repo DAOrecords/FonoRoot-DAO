@@ -10,6 +10,8 @@ import TestPageFive from './Pages/CreateRevenue';
 import TestPageSix from './Pages/AlterRevenue';
 import TestPageSeven from './Pages/DeactivateListing';
 import CreateGroup from './Pages/CreateGroup';
+import Buy from './Pages/Buy';
+import IncomeTables from './Pages/IncomeTables';
 
 
 export default function App() {
@@ -83,6 +85,21 @@ export default function App() {
             <TestPageSeven />
           }
         />           
+        <Route
+          exact
+          path='/buy'
+          element={
+            <Buy />
+          }
+        />
+        <Route
+          exact
+          path='/income'
+          element={
+            <IncomeTables />
+
+          }
+        />
         <Route 
           exact
           path='/create_group'

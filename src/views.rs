@@ -120,15 +120,23 @@ impl Contract {
         self.income_tables.get(&id).unwrap()
     }
 
+    /// Get price for single NFT
+    pub fn get_price(&self, minting_contract: AccountId, root_id: TokenId) -> Option<SalePriceInYoctoNear> {
+        let uniq_id = format!("{}-{}", minting_contract, root_id);
+        let tree_index = self.uniq_id_to_tree_index.get(&uniq_id.clone()).unwrap();
+        
+        self.income_tables.get(&tree_index)
+        .unwrap()
+        .price
+    }
+
 
     /// List income tables, with possible limit
-    /*pub fn get_income_tables(&self, from_index: u64, limit: u64) -> Vec<TreeIndex, IncomeTable> {
-        self.income_tables.range((Bound::Included(0), Bound::Included(1)))
+    pub fn get_income_tables(&self, from_index: u64, limit: u64) -> Vec<(TreeIndex, IncomeTable)> {
+        let end = from_index + limit;
+        self.income_tables.range((Bound::Included(from_index), Bound::Excluded(end)))
             .collect::<Vec<(TreeIndex, IncomeTable)>>()
-        
-        //self.income_tables.iter(from_index, min(self.income_tables.len()-1, from_index + limit))
-            //.collect()
-    }*/
+    }
 
     /// Get specific proposal.
     pub fn get_proposal(&self, id: u64) -> ProposalOutput {

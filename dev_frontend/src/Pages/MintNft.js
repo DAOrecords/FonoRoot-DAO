@@ -90,7 +90,7 @@ export default function TestPageFour() {
 
         <section>
           <ul id="inProgressList">
-            <p>{"These are the in progress NFTS (as JSON objects). Click on an element to edit."}</p>
+            <p>{"These are the in progress NFTS (as JSON objects). Click on an element to select."}</p>
             {inProgressNfts.map((inProgressNft) => {
               const stringifiedNft = JSON.stringify(inProgressNft, null, "\t");
               return (

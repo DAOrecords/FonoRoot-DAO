@@ -69,8 +69,8 @@ export async function initContract() {
   window.accountId = window.walletConnection.getAccountId()                                // Getting the Account ID. If still unauthorized, it's just empty string
   
   window.contract = await new Contract(window.walletConnection.account(), nearConfig.contractName, {
-    viewMethods: ["get_policy", "get_last_proposal_id", "get_proposals", "get_in_progress_nfts", "get_catalogue", "get_single_income_table"],
-    changeMethods: ["add_proposal", "act_proposal"],
+    viewMethods: ["get_policy", "get_last_proposal_id", "get_proposals", "get_in_progress_nfts", "get_catalogue", "get_single_income_table", "get_income_tables"],
+    changeMethods: ["add_proposal", "act_proposal", "buy_nft", "get_price"],
   })
 }
 
@@ -232,6 +232,7 @@ export async function createRevenue(rootId, contract, revenueTable, price) {
       }
     }
   };
+console.log("args: ", args)
 
   const gas = 100000000000000;
   const amount = utils.format.parseNearAmount("0");
@@ -342,6 +343,7 @@ export async function getLastProposalId() {
     return lastProposalId;
 }
 
+
 // Get list of proposals from index
 export async function getListOfProposals(index) {
   let proposalList = [];
@@ -359,6 +361,25 @@ export async function getListOfProposals(index) {
     .catch((err) => console.error(`There was an error while trying to get the list of proposals from index ${index}, `, err));
 
     return proposalList;
+}
+
+// Get list of IncomeTables
+export async function getListOfIncomeTables(from = 0, limit = 999999999) {
+  let incomeTableList = [];
+
+  const args = {
+    "from_index": from,
+    "limit": limit
+  }
+
+  await window.contract.get_income_tables(args)
+    .then((response) => {
+      console.log("Successfully got the list of IncomeTables ", response);
+      incomeTableList = response;
+    })
+    .catch((err) => console.error(`There was an error while trying to get the list of IncomeTables, from: ${from}, limit: ${limit}, `, err));
+
+    return incomeTableList;
 }
 
 // Get list of all InProgress NFTs
@@ -411,6 +432,48 @@ export async function getSingleIncomeTable(treeIndex) {
   return incomeTable;
 }
 
+// Get price for single NFT
+export async function getPrice(contract, rootId) {
+  let price = null;
+
+  const args = {
+    minting_contract: contract,
+    root_id: rootId
+  }
+
+  await window.contract.get_price(args)
+    .then((result) => {
+      console.log(`Successfully got price for ${rootId} on contract ${contract}`, result);
+      price = result;
+    })
+    .catch((err) => console.error(`There was an error while trying to fetch the price for ${rootId} on contract ${contract}: ${err}`));
+
+  return price;
+}
+
+// Buy an NFT (this function is part of the DAO contract)
+export async function buyNFT(rootId, contract, price) {
+  let message = "not_succeed";
+
+  const args = {
+    root_id: rootId,
+    minting_contract: contract
+  }
+
+  const gas = 250000000000000;
+
+  await window.contract.buy_nft(args, gas, price)
+    .then((msg) => {
+      message = "Success! (Buy NFT through DAO), " +  msg;
+    })
+    .catch((err) => {
+      console.error(`There was an error while trying to buy an NFT through the DAO, RootID: ${rootId}, contract: ${contract}`, err);
+      message = `There was an error while trying to buy an NFT through the DAO, RootID: ${rootId}, contract: ${contract}` +  err;
+    });
+
+    return message;
+}
+
 // Get policy objects
 export async function getListOfPolicyRoles() {
   let roles = [];
@@ -445,6 +508,7 @@ export async function getNftMetadata(contract, rootId) {
 
   return result;
 }
+
 
 export function logout() {
   console.log("?")

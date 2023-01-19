@@ -138,3 +138,30 @@ a {
   font-weight: bold;
   color: greenyellow;
 }
+
+.incomeTableEntry {
+  background-color: black;
+  color: yellow;
+  padding: 8px;
+  margin-top: 8px;
+  margin-bottom: 8px;
+}
+
+.buyEntry {
+  display: flex;
+  margin: 8px;
+}
+
+.buyButton {
+  border: none;
+  background: none;
+  background-color: yellow; 
+  color: red;
+  height: 100px;
+  width: 100%;
+}
+.buyButton::hover {
+  font-weight: bolder;
+  color: #CCCCFF;
+  background-color: red;
+}

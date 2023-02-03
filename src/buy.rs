@@ -7,7 +7,7 @@ impl Contract {
     pub fn buy_nft(&self, root_id: TokenId, minting_contract: AccountId) {
         log!("buy_nft() inside DAO contract started, root_id: {}, minting_contract: {}", root_id, minting_contract);
 
-        let uniq_id = format!("{}-{}", minting_contract, root_id);
+        let uniq_id = UniqId::new(minting_contract.clone(), root_id.clone());
         // Check if the NFT exists in our system, it would be a problem if we would facilitate the buying of an NFT that is not connected to the DAO
         let tree_index = self.uniq_id_to_tree_index.get(&uniq_id.clone()).unwrap_or_else(|| {
             panic!("TreeIndex not found! Most likely root_id or contract is incorrect.");
@@ -23,16 +23,16 @@ impl Contract {
         let args = BuyArgs {
             root_id: root_id
         };
-        let json_args = near_sdk::serde_json::to_string(&args).unwrap();
-        let base64_args = json_args.clone().into_bytes();                
+        let json_args = near_sdk::serde_json::to_string(&args).unwrap();                    // This is a string
+        let base64_args = json_args.clone().into_bytes();                                   // This is a Base64 byte array
         
         let promise = Promise::new(minting_contract);
         
         let action = ActionCall {
             method_name: "buy_nft_from_vault".to_string(),
             args: base64_args.into(),
-            deposit: U128(price + 10000000000000000000000),
-            gas: U64(100000000000000),
+            deposit: U128(100_000_000_000_000_000_000_000),                                 // This big number is 0.1 NEAR, it is for storage. The actual price stays in the DAO contract
+            gas: U64(100_000_000_000_000),
         };
 
         log!("Prepairing cross-contract call...");
@@ -47,7 +47,7 @@ impl Contract {
             tree_index,
             env::current_account_id(),
             0,
-            Gas(50000000000000)
+            Gas(50_000_000_000_000)
         ));
         
         log!("Initiating cross-contract call! Function inside DAO contract exiting...");
@@ -67,13 +67,10 @@ impl Contract {
             true,
             "Result should be true."
         );
-        log!("Hello from buy_callback_test()!");
         log!("This NFT was bought: {} (TreeIndex)", tree_index);
         let mut the_income_table = self.income_tables.get(&tree_index).unwrap();
-        //let catalogue_for_artist = self.catalogues.get(&the_income_table.owner).unwrap();
-        //let the_catalogue_entry = catalogue_for_artist.get(&tree_index).unwrap().unwrap();
         the_income_table.total_income = the_income_table.total_income + u128::from(the_income_table.price.unwrap());
         the_income_table.current_balance = the_income_table.current_balance + u128::from(the_income_table.price.unwrap());
-        self.income_tables.insert(&tree_index, &the_income_table);              // Would the same thing happen without this line?
+        self.income_tables.insert(&tree_index, &the_income_table);              // Would the same thing happen without this line? No.
     }
 }

@@ -12,8 +12,8 @@ export default function TestPageFive() {
   const [message, setMessage] = useState("");
   const [proposalId, setProposalId] = useState(null);
   const [revenues, setRevenues] = useState([                                     // Will contain objects of the format { account: "alice.near", percent: 2000 }
-    { account: "daorecords.sputnik-dao.near", percent: 1500 },
-    { account: "recordpooldao.sputnik-dao.near", percent: 500 }
+    { account: "daorecords.soundsplash.testnet", percent: 1500 },
+    { account: "recordpooldao.soundsplash.testnet", percent: 500 }
   ]);  
   const [price, setPrice] = useState(0);
   const [readyForVote, setReadyForVote] = useState(false);

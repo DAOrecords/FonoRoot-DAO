@@ -180,14 +180,6 @@ pub fn default_policy(council: Vec<AccountId>) -> Policy {
     Policy {
         roles: vec![
             RolePermission {
-                name: "all".to_string(),
-                kind: RoleKind::Everyone,
-                permissions: vec!["*:AddProposal".to_string()].into_iter().collect(),
-                // **TODO** This should be removed, and only added users should be able to add proposals, to avoid spam
-                // (We don't require the user to include a minimum deposit anymore.)
-                vote_policy: HashMap::default(),
-            },
-            RolePermission {
                 name: "council".to_string(),
                 kind: RoleKind::Group(council.into_iter().collect()),
                 // All actions except RemoveProposal are allowed by council.
@@ -325,7 +317,7 @@ impl Policy {
     }
 
     /// Returns set of roles that this user is member of permissions for given user across all the roles it's member of.
-    fn get_user_roles(&self, user: UserInfo) -> HashMap<String, &HashSet<String>> {
+    pub fn get_user_roles(&self, user: UserInfo) -> HashMap<String, &HashSet<String>> {
         let mut roles = HashMap::default();
         for role in self.roles.iter() {
             if role.kind.match_user(&user) {

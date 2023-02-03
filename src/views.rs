@@ -109,8 +109,6 @@ impl Contract {
 
     /// List CatalogueEntries for an artist's catalogue
     pub fn get_catalogue(&self, artist: AccountId) -> Vec<(TreeIndex, Option<CatalogueEntry>)> {
-        let x = self.catalogues.contains_key(&artist);
-        log!("contains key: {:?}", x);
         let catalogue_for_artist = self.catalogues.get(&artist).unwrap();
         catalogue_for_artist.to_vec()
     }
@@ -122,7 +120,7 @@ impl Contract {
 
     /// Get price for single NFT
     pub fn get_price(&self, minting_contract: AccountId, root_id: TokenId) -> Option<SalePriceInYoctoNear> {
-        let uniq_id = format!("{}-{}", minting_contract, root_id);
+        let uniq_id = UniqId::new(minting_contract, root_id);
         let tree_index = self.uniq_id_to_tree_index.get(&uniq_id.clone()).unwrap();
         
         self.income_tables.get(&tree_index)

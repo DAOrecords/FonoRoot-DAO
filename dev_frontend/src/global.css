@@ -146,6 +146,10 @@ a {
   margin-top: 8px;
   margin-bottom: 8px;
 }
+.incomeTableEntrySelected {
+  background-color: #000066;
+  /*color: orange;*/
+}
 
 .buyEntry {
   display: flex;

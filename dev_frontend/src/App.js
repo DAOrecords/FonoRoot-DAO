@@ -12,6 +12,7 @@ import TestPageSeven from './Pages/DeactivateListing';
 import CreateGroup from './Pages/CreateGroup';
 import Buy from './Pages/Buy';
 import IncomeTables from './Pages/IncomeTables';
+import Payout from './Pages/Payout';
 
 
 export default function App() {
@@ -107,6 +108,13 @@ export default function App() {
             <CreateGroup />
           }
         />        
+        <Route 
+          exact
+          path='/payout'
+          element={
+            <Payout />
+          }
+        /> 
 
       </Routes>
     </HashRouter>

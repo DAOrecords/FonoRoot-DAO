@@ -50,7 +50,7 @@ export default function TestPageSix() {
         return getSingleIncomeTable(treeElement[0])
           .then((incomeTable) => {
             return getNftMetadata(incomeTable.contract, incomeTable.root_id)
-              .then((meta) => {return {meta: meta, contract: incomeTable.contract, root_id: incomeTable.root_id}})
+              .then((meta) => {return {meta: meta, contract: incomeTable.contract, root_id: incomeTable.root_id, price: incomeTable.price}})
               .catch((err) => console.error(`getNftMetadata errored, contract is ${incomeTable.contract} and rootId is ${incomeTable.root_id}`, err));
           })
           .catch((err) => console.error(`getSingleIncomeTable errored, treeIndex is ${treeElement[0]}`, err));
@@ -63,7 +63,8 @@ export default function TestPageSix() {
           treeIndex: catalogue[index][0],
           title: resultLine.meta.title,
           contract: resultLine.contract,
-          rootId: resultLine.root_id
+          rootId: resultLine.root_id,
+          price: resultLine.price
         }
       });
       setMetaList(tempArray);
@@ -89,12 +90,12 @@ export default function TestPageSix() {
   useEffect(() => {
     if (!catalogue[selected]) return;
     let rTable = [    // Will contain objects of the format { account: "alice.near", percent: 2000 }
-      { account: "daorecords.sputnik-dao.near", percent: 1500 },
-      { account: "recordpooldao.sputnik-dao.near", percent: 500 }
+      { account: "daorecords.soundsplash.testnet", percent: 1500 },
+      { account: "recordpooldao.soundsplash.testnet", percent: 500 }
     ];
     let selectedRevenueObj = Object.assign({}, catalogue[selected][1].revenue_table);
-    delete selectedRevenueObj["daorecords.sputnik-dao.near"];
-    delete selectedRevenueObj["recordpooldao.sputnik-dao.near"];
+    delete selectedRevenueObj["daorecords.soundsplash.testnet"];
+    delete selectedRevenueObj["recordpooldao.soundsplash.testnet"];
 
     Object.keys(selectedRevenueObj).map((entry, index) => {
       rTable.push({
@@ -104,7 +105,7 @@ export default function TestPageSix() {
     });
 
     setRevenues(rTable);
-    setPrice(utils.format.formatNearAmount(catalogue[selected][1].price))
+    setPrice(utils.format.formatNearAmount(metaList[selected].price))
   }, [selected]);
 
   // Act on proposal for AlterRevenue
@@ -168,7 +169,7 @@ export default function TestPageSix() {
                 <p><i>Title: </i><strong>{metaList[index].title}</strong></p>
                 <p><i>Contract: </i>{metaList[index].contract}</p>
                 <p><i>Root ID: </i>{metaList[index].rootId}</p>
-                <p><i>{"Price: "}</i>{utils.format.formatNearAmount(entry[1].price)}</p>
+                <p><i>{"Price: "}</i>{utils.format.formatNearAmount(metaList[index].price)}</p>
                 <p><i>Revenue Table:</i></p>
                 <ul>
                 {Object.keys(entry[1].revenue_table).map((line, ix) => {

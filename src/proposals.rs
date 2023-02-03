@@ -8,8 +8,8 @@ use near_sdk::{log, AccountId, Balance, Gas, PromiseOrValue};
 use crate::policy::UserInfo;
 use crate::types::{
     convert_old_to_new_token, Action, Config, OldAccountId, GAS_FOR_FT_TRANSFER, OLD_BASE_TOKEN,
-    ONE_YOCTO_NEAR, WeDontKnow, NftDataFromFrontEnd, MintingContractArgs, MintingContractMeta, MintingContractExtra,
-    RevenueTable, SalePriceInYoctoNear, TokenId
+    ONE_YOCTO_NEAR, ScheduleMintParams, NftDataFromFrontEnd, MintingContractArgs, MintingContractMeta, MintingContractExtra,
+    RevenueTable, SalePriceInYoctoNear, TokenId, Payout
 };
 use crate::upgrade::{upgrade_remote, upgrade_using_factory};
 use crate::*;
@@ -115,13 +115,20 @@ pub enum ProposalKind {
     ChangePolicyUpdateDefaultVotePolicy { vote_policy: VotePolicy },
     /// Update the parameters from the policy. This is short cut to updating the whole policy.
     ChangePolicyUpdateParameters { parameters: PolicyParameters },
-    // **TODO** Add MintRoot and the other necesarry functions here
+    /// MintRoot will do a cross-contract-call to do FonoRoot minting contract. Data has to be ready at this point.
     MintRoot { id: u64 },
+    /// PrepairNft will create an InProgressMetadata object, that can be half-ready.
     PrepairNft { nft_data: NftDataFromFrontEnd },
+    /// The user can update values for already existing InProgressMetadata object
     UpdatePrepairedNft { id: u64, new_nft_data: NftDataFromFrontEnd },
+    /// Create a RevenueTable for a song that was already minted
     CreateRevenueTable { id: TokenId,  contract: AccountId, unsafe_table: HashMap<AccountId, u64>, price: SalePriceInYoctoNear },
+    /// Update the RevenueTable for a song that already has a RevenueTable
     AlterRevenueTable { tree_index: TreeIndex, unsafe_table: HashMap<AccountId, u64>, price: SalePriceInYoctoNear }, 
-    ScheduleMint { params: WeDontKnow },
+    // ** TODO**
+    PayoutRevenue { tree_index_list: Vec<TreeIndex> },
+    // **TODO** Not implemented
+    ScheduleMint { params: ScheduleMintParams },
 }
 
 impl ProposalKind {
@@ -153,6 +160,7 @@ impl ProposalKind {
             ProposalKind::UpdatePrepairedNft { .. } => "update_prepaired_nft",
             ProposalKind::CreateRevenueTable { .. } => "create_revenue_table",
             ProposalKind::AlterRevenueTable { .. }  => "alter_revenue_table",
+            ProposalKind::PayoutRevenue { .. } => "payout_revenue",
             ProposalKind::ScheduleMint { .. } => "schedule_mint"
         }
     }
@@ -426,16 +434,16 @@ impl Contract {
             ProposalKind::MintRoot { id } => {
                 log!("Entering MintRoot...");
 
-                let selected_draft = self.in_progress_nfts.remove(id).unwrap();
+                let selected_draft = self.in_progress_nfts.remove(id).unwrap();             // If this contract call is successfull, the draft will be removed from the list
                 let fonoroot: AccountId =  selected_draft.contract;
-                self.assert_artist_can_mint(fonoroot.clone());
-                assert_eq!{
+                self.assert_artist_can_mint(fonoroot.clone());                              // Artist needs to be member of the master group of the minting contract
+                assert_eq!{                                                                 // The caller has to be the creator of the draft, otherwise the caller is not allowed to mint
                     env::predecessor_account_id(),
                     selected_draft.artist,
                     "Only the owner of the draft can mint!"
                 };
                 
-                let extra = near_sdk::serde_json::to_string( &MintingContractExtra {
+                let extra = near_sdk::serde_json::to_string( &MintingContractExtra {        // extra will be a JSON string, that we will insert into the metadata
                     music_cid: selected_draft.music.unwrap(),
                     music_hash: None,
                     parent: None,
@@ -445,7 +453,6 @@ impl Contract {
 
                 // Validation should happen at this point. That validation that the param exists is already done by .unwrap()
                 // We need to add hashes for `reference`, `media`, and `music_cid`
-
                 let args = MintingContractArgs {
                     receiver_id: selected_draft.artist.clone(),
                     metadata: MintingContractMeta {
@@ -464,16 +471,16 @@ impl Contract {
                     }
                 };
                 
-                let json_args = near_sdk::serde_json::to_string(&args).unwrap();
-                let base64_args = json_args.clone().into_bytes();                
+                let json_args = near_sdk::serde_json::to_string(&args).unwrap();            // This is a string
+                let base64_args = json_args.clone().into_bytes();                           // This is a Base64 byte array
                 
-                let mut promise = Promise::new(fonoroot.clone().into());
+                let mut promise = Promise::new(fonoroot.clone().into());                    // Promise object created
                 
-                let action = ActionCall {
-                    method_name: "mint_root".to_string(),
+                let action = ActionCall {                                                   // We are calling 'mint_root', we are depositing 0.2 NEAR,
+                    method_name: "mint_root".to_string(),                                   // but will receive back the money that is not used for storage
                     args: base64_args.into(),
-                    deposit: U128(200000000000000000000000),
-                    gas: U64(100000000000000),
+                    deposit: U128(200_000_000_000_000_000_000_000),
+                    gas: U64(100_000_000_000_000),
                 };
                 
                 log!("Prepairing cross-contract call...");
@@ -484,20 +491,20 @@ impl Contract {
                     action.deposit.0,
                     Gas(action.gas.0),
                 )
-                .then(ext_self::mint_root_callback(
-                    selected_draft.artist,
+                .then(ext_self::mint_root_callback(                                         // 'mint_root_callback' will run after the NFT was created,
+                    selected_draft.artist,                                                  // which is in lib.rs
                     env::current_account_id(),
                     0,
-                    Gas(50000000000000)
+                    Gas(50_000_000_000_000)
                 ));
                 
                 log!("Initiating cross-contract call! Function inside DAO contract exiting...");
                 promise.into()
             }
             ProposalKind::PrepairNft { nft_data } => {
-                self.assert_artist_can_mint(nft_data.contract.clone());
+                self.assert_artist_can_mint(nft_data.contract.clone());                     // Artist needs to be member of the master group of the minting contract
 
-                let the_new_nft_data = InProgressMetadata {
+                let the_new_nft_data = InProgressMetadata {                                 // This can be incomplete, might not be ready to mint
                     id: self.in_progress_nonce,
                     initiated: env::block_timestamp(),
                     artist: env::predecessor_account_id(),
@@ -525,8 +532,8 @@ impl Contract {
                     "You can only update prepaired NFTs that you originally created!"
                 );
 
-                let updated_nft_data = InProgressMetadata {
-                    id: id.clone(),
+                let updated_nft_data = InProgressMetadata {                                 // This can be incomplete, might not be ready to mint
+                    id: id.clone(),                                                         // (would need a second update in that case)
                     initiated: old_data.initiated,
                     artist: env::predecessor_account_id(),
                     contract: new_nft_data.contract.clone(),
@@ -544,20 +551,10 @@ impl Contract {
             },
             ProposalKind::CreateRevenueTable { id, contract, unsafe_table, price } => {
                 // Create a revenue table for a RootNFT that was already created
-                let uniq_id = format!("{}-{}", contract, id);
-                /*log!("Length: {}", self.uniq_id_to_tree_index.len());
-                for x in self.uniq_id_to_tree_index.values() {
-                    log!("Values: {}", x);
-                }
-                for y in self.uniq_id_to_tree_index.keys() {
-                    log!("Keys: {}", y);
-                }*/
+                let uniq_id = UniqId::new(contract.clone(), id.clone());
                 let tree_index = self.uniq_id_to_tree_index.get(&uniq_id.clone()).unwrap();
-                //let tree_index = 0; There is a very serious error here, but we don't understand what it is ({"index":0,"kind":{"ExecutionError":"Smart contract panicked: Cannot deserialize value with Borsh"})
                 let mut income_table = self.income_tables.get(&tree_index.clone()).unwrap();
-                
                 let revenue_table = RevenueTable::new(unsafe_table.clone()).unwrap();
-
 
                 log!("Uniq ID: {:?}", uniq_id.clone());
                 log!("Tree Index: {:?}", tree_index.clone());
@@ -568,15 +565,13 @@ impl Contract {
                 // Prepair Revenue Entry
                 let mut catalogue_for_caller = self.catalogues.get(&env::signer_account_id()).unwrap();              // Has to exist. Otherwise, panic.
                 
-                // Validate that caller has the right to modify this entry / add new entry.
-                assert_eq!(
-                    income_table.owner,
+                assert_eq!(                                                                 
+                    income_table.owner,                                                     // Validate that caller has the right to  add new entry.
                     env::signer_account_id(),
                     "Only the owner (Artist) can alter the revenue table!"
                 );
                 
-                // Update is not possible through this proposal
-                if catalogue_for_caller.get(&tree_index).is_none() {
+                if catalogue_for_caller.get(&tree_index).is_none() {                        // Update is not possible through this proposal
                     panic!("A Revenue Table already exists!");
                 }
                 
@@ -592,9 +587,7 @@ impl Contract {
             },
             ProposalKind::AlterRevenueTable { tree_index, unsafe_table, price } => {
                 // Update a revenue table for a RootNFT
-                log!("Hello from Alter Revenue Table!");
                 log!("TreeIndex: {:?}", tree_index);
-
                 let new_revenue_table = RevenueTable::new(unsafe_table.clone()).unwrap();
                 let mut income_table = self.income_tables.get(&tree_index.clone()).unwrap();
                 log!("The new Revenue Table from front end: {:?}", new_revenue_table);
@@ -604,8 +597,7 @@ impl Contract {
                 // Prepair Revenue Entry
                 let mut catalogue_for_caller = self.catalogues.get(&env::signer_account_id()).unwrap();              // Has to exist. Otherwise, panic.
                 
-                // Validate that caller has the right to modify this entry / add new entry.
-                assert_eq!(
+                assert_eq!(                                                                 // Validate that caller has the right to modify this entry
                     income_table.owner,
                     env::signer_account_id(),
                     "Only the owner (Artist) can alter the revenue table!"
@@ -622,7 +614,58 @@ impl Contract {
                 log!("New RevenueTable entry was inserted: {:?}", self.catalogues.get(&env::signer_account_id()).unwrap());
 
                 PromiseOrValue::Value(())
-            }
+            },
+            ProposalKind::PayoutRevenue { tree_index_list } => {
+                log!("Payout Revenue from IncomeTable, according to RevenueTable");
+                
+                // We have a list of IncomeTables
+                // Those IncomeTables, for which the caller is owner, will be paid out
+                // There will be a warning, that some of the IncomeTables could not be paid out... don't know how, though.
+
+                // Possibly the Council member can always initiate payout, then the condition is a little bit more complicated
+                let user = UserInfo {
+                    account_id: env::signer_account_id(),
+                    amount: 0
+                };
+                let policy = self.policy.get().unwrap().to_policy();
+                let is_admin = policy.get_user_roles(user).contains_key(&"council".to_string());
+                log!("Caller is an admin: {}", is_admin);
+                let mut could_not_pay_out: Vec<TreeIndex> = Vec::new();
+                
+                for index in tree_index_list {
+                    let mut current_table = self.income_tables.get(&index).unwrap();
+                    log!("current_table.owner: {}", current_table.owner);
+                    log!("current_table.current_balance: {}", current_table.current_balance);
+                    log!("current_table.total_income: {}", current_table.total_income);
+                    let is_owner = current_table.owner == env::signer_account_id();
+                    if is_owner || is_admin {                                                     // RevenueTable payout happens here
+                        let owner_catalogue = self.catalogues.get(&current_table.owner).unwrap();
+                        let entry = owner_catalogue.get(&index).unwrap().unwrap();                // This is a CatalogueEntry struct
+                        
+                        let payout_table = self.generate_payout_object(                           // Will contain amounts in yoctoNEAR
+                            entry.revenue_table,
+                            current_table.current_balance,
+                            6
+                        );
+
+                        for (key, amount) in payout_table.payout.iter() {                                // Send the money to each account on the list
+                            let beneficiary = key.clone();
+                            log!("Sending {} yoctoNEAR to {}", u128::from(amount.clone()), beneficiary);
+                            Promise::new(beneficiary).transfer(u128::from(amount.clone()));            // We are not checking if all the promises return without error     
+                        }
+
+                        current_table.current_balance = 0;
+                        self.income_tables.insert(&index, &current_table);
+                        log!("Current balance for TreeIndex {} was nulled.", index);
+                    } else {
+                        could_not_pay_out.push(index.clone());
+                        log!("The IncomeTable with TreeIndex {} could not be paid out, because the caller is neither the owner, nor a council member.", index);
+                    }
+                }
+                log!("These are the TreeIndexes that were not paid out: {:?}", could_not_pay_out);
+
+                PromiseOrValue::Value(())
+            },
             ProposalKind::ScheduleMint { params: _ } => {
                 //self.assert_artist_can_mint(nft_data.contract.clone());
 
@@ -878,19 +921,40 @@ impl Contract {
             account_id: env::predecessor_account_id(),
             amount: 0
         };
-        // **TODO** should move policy.get() here
+        let policy = self.policy.get().unwrap().to_policy();
 
-        for i in 0..self.policy.get().unwrap().to_policy().roles.len() {
-            if &self.policy.get().unwrap().to_policy().roles[i].name == &master_group {
-                log!("match_user(): {:?}", self.policy.get().unwrap().to_policy().roles[i].kind.match_user(&artist));
+        for i in 0..policy.roles.len() {
+            if &policy.roles[i].name == &master_group {
+                log!("Artist found in policy (match_user()): {:?}", policy.roles[i].kind.match_user(&artist));
                 assert!(
-                    self.policy.get().unwrap().to_policy().roles[i].kind.match_user(&artist),
+                    policy.roles[i].kind.match_user(&artist),
                     "You are not allowed to mint on this specific contract."
                 );
                 return;
             }
         }
         assert!(false, "The role was not found.");
+    }
+
+    /// Helper function that creats a revenue payout object
+    pub fn generate_payout_object(&self, revenue: RevenueTable, price: Balance, max_len_payout: u32) -> Payout {
+        let mut total = 0;
+        let price_u128 = u128::from(price);
+        let mut payout_object = Payout {
+            payout: HashMap::new()
+        };
+
+        //assert!(revenue.len() as u32 <= max_len_payout, "The contract cannot payout to that many receivers");
+
+        for (key, percent) in revenue.into_iter() {
+            let beneficiary = key.clone();
+            payout_object.payout.insert(beneficiary, U128(percent as u128 * price / 10_000u128));
+            total += u128::from(percent);
+        }
+
+        assert_eq!(total, 10000, "Total should be 100%!");
+
+        payout_object
     }
 }
 

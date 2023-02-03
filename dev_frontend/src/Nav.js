@@ -42,6 +42,10 @@ export default function Nav() {
         <li className="navListElement">
           <Link to={'/income'}>List IncomeTables</Link>
         </li>
+
+        <li className="navListElement">
+          <Link to={'/payout'}>Payout</Link>
+        </li>
         
         <li className="navListElement">
           <Link to={'/create_group'}>Create New Group</Link>

@@ -64,14 +64,16 @@ pub enum Action {
     MoveToHub,
 }
 
-/*#[derive(BorshSerialize, BorshDeserialize, Serialize, Deserialize, Clone, Ord, Eq, PartialEq, PartialOrd, Debug)]
+/// Combination of MintingContract+RootId (e.g. "minting-contract.near-fono-root-2")
+#[derive(BorshSerialize, BorshDeserialize, Serialize, Deserialize, Debug, Clone)]
 #[serde(crate = "near_sdk::serde")]
-pub struct UniqId(String);*/
-pub type UniqId = String;
+pub struct UniqId (String);
 
 pub type SalePriceInYoctoNear = U128;
-pub type TokenId = String;                          // Same as in Minting Contract
-pub type TreeIndex = u64;                           // Unique identifier of an NFT, a number
+/// This is the same variable that is used in the FonoRoot minting contract (e.g. "fono-root-2-5", "fono-root-2")
+pub type TokenId = String;
+/// Unique identifier of an NFT, a number. A UniqId will map to a TreeIndex
+pub type TreeIndex = u64;
 
 /// RevenueTable, that is a LookupMap that takes care of limits
 #[derive(BorshSerialize, BorshDeserialize, Serialize, Deserialize, Debug, Clone)]
@@ -80,8 +82,8 @@ pub struct RevenueTable(HashMap<AccountId, u64>);
 
 /// InProgressMetadata
 /// Some fields can be null, because it is possible, that the Artist does not finish uploading all the info
-/// When it is ready, it will be possible to mint based on the prepairer-data that is here.
-/// The data that was already made into an NFT, should be deleted.
+/// When it is ready, it will be possible to mint based on the prepaired-data that is here.
+/// The data that was already made into an NFT will be deleted.
 #[derive(BorshSerialize, BorshDeserialize, Serialize, Deserialize, Debug)]
 #[serde(crate = "near_sdk::serde")]
 pub struct InProgressMetadata {
@@ -104,24 +106,25 @@ pub struct InProgressMetadata {
     /// Image, according to NFT standard. It will be an IPFS CID
     pub image: Option<String>,
     /// Music folder, not part of NFT standard. This is an IPFS CID, and it points to a folder that has different quality files of the same song.
-    pub music: Option<String>,
+    pub music: Option<String>,          // currently this is a music file, but we want to change that in the future
 }
 
+/// These are the parameters the FonoRoot minting contract will take as input, when we mint a new RootNFT
 #[derive(BorshSerialize, BorshDeserialize, Serialize, Deserialize, Debug)]
 #[serde(crate = "near_sdk::serde")]
 pub struct MintingContractArgs {
     pub receiver_id: AccountId,
     pub metadata: MintingContractMeta,
-
 }
 
+/// These are the parameters the FonoRoot minting contract will take as input, when we buy an NFT
 #[derive(BorshSerialize, BorshDeserialize, Serialize, Deserialize, Clone, Debug)]
 #[serde(crate = "near_sdk::serde")]
 pub struct BuyArgs {
     pub root_id: TokenId
 }
 
-/// Exact copy of TokenMetadata, from Fono-Root (that is following the standard)
+/// Exact copy of TokenMetadata, from FonoRoot (that is following the NFT standard)
 #[derive(BorshSerialize, BorshDeserialize, Serialize, Deserialize, Debug)]
 #[serde(crate = "near_sdk::serde")]
 pub struct MintingContractMeta {
@@ -136,7 +139,7 @@ pub struct MintingContractMeta {
     pub updated_at: Option<u64>,            // We will pass None
     pub extra: Option<String>,              // This is JSON-stringified version of MintingContractExtra
     pub reference: String,                  // This is `meta` in InProgressMetadata
-    pub reference_hash: Option<Base64VecU8>,// We will have to do this later
+    pub reference_hash: Option<Base64VecU8>,// **TODO** We will have to do this later
 }
 
 /// Exact copy of Extra, from Fono-Root
@@ -163,23 +166,23 @@ pub struct NftDataFromFrontEnd {
     pub meta_json_cid: Option<String>
 }
 
-
-/// Key is the same as TreeIndex
+/// A Catalogue for an Artist. Each Artist has a Catalogue. In Contract, catalogues LookupMap is a list if Catalogue-s. (Artist AccountId is key)
+/// TreeIndex is unique, we can find the NFT in the income_tables with this index
 pub type Catalogue = UnorderedMap<TreeIndex, Option<CatalogueEntry>>;
 
+/// Each song has a CatalogueEntry, where there is a list of accounts that should be paid out from the income (with percentages)
 #[derive(BorshSerialize, BorshDeserialize, Serialize, Deserialize, Clone, Debug)]
 #[serde(crate = "near_sdk::serde")]
 pub struct CatalogueEntry {
-    pub revenue_table: RevenueTable,     // This is the revenue table that used to be part of the NFT in the FonoRoot contract
+    pub revenue_table: RevenueTable,     // price used to be here, that's why this is a struct
+    // we will probably keep this a struct, because we might add more fields later.
 }
 
-// We could easily get all the songs for a given Artist, BUT, how do we get all the songs that exist, in chronological order?
-// **TODO** If we move `income` from Catalogue, we need another object for that. Should be very similar to Catalogues/Catalogue
-//pub type IncomeTables = HashMap<UniqId, IncomeTable>; TreeMap!!
-
 // **TODO** This is just a placeholder
-pub type WeDontKnow = String;
+pub type ScheduleMintParams = String;
 
+/// IncomeTable is a very important object, that is used for other things as well, because this is most easily iterable.
+/// This is why the price is here. It might be a good idea to rename this, to something like _MainSongObject_
 #[derive(BorshSerialize, BorshDeserialize, Serialize, Deserialize, Clone, Debug)]
 #[serde(crate = "near_sdk::serde")]
 pub struct IncomeTable {
@@ -191,6 +194,12 @@ pub struct IncomeTable {
     pub price: Option<SalePriceInYoctoNear>,
 }
 
+/// Payout object
+#[derive(Serialize, Deserialize, Debug)]
+#[serde(crate = "near_sdk::serde")]
+pub struct Payout {
+    pub payout: HashMap<AccountId, U128>,
+} 
 
 /// Return value of `mint_root`, from Fono-Root minting contract
 #[derive(BorshSerialize, BorshDeserialize, Serialize, Deserialize, Clone, Debug)]
@@ -221,13 +230,26 @@ impl RevenueTable {
         }
     }
 }
-/*
-impl UniqId {
-    pub fn new(contract: AccountId, root_id: TokenId) -> Option<Self> {
-        let uniq_id: UniqId = format!("{}-{}", contract, root_id);
-        Some(uniq_id)
+impl IntoIterator for RevenueTable {
+    type Item = (AccountId, u64);
+    //type RevItKey = AccountId;
+    //type RevItValue = u64;
+    type IntoIter = std::collections::hash_map::IntoIter<AccountId, u64>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.0.into_iter()
     }
-}*/
+}
+
+impl UniqId {
+    pub fn new(contract: AccountId, root_id: TokenId) -> UniqId {
+        /*if contract.is_empty() || root_id.is_empty() {
+            panic!("Contract should be valid AccountId and root_id should be valid FonoRoot RootID");
+        }*/
+        // We could write different kind of restrains here, but the first restrain is that first part is AccountId and second part is TokenId
+        UniqId(format!("{}-{}", contract, root_id))
+    }
+}
 
 /// In near-sdk v3, the token was represented by a String, with no other restrictions.
 /// That being said, Sputnik used "" (empty String) as a convention to represent the $NEAR token.

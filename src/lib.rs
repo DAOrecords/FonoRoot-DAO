@@ -49,7 +49,9 @@ pub enum StorageKeys {
 pub trait ExtSelf {
     /// Callback after proposal execution.
     fn on_proposal_callback(&mut self, proposal_id: u64) -> PromiseOrValue<()>;
-    fn mint_root_callback(&mut self, #[callback_result] result: Result<MintRootResult, near_sdk::PromiseError>, custom: AccountId);
+    /// Callback after FonoRoot minting contract created a new RootNFT. This callback will create a new empty IncomeTable, and a Catalogue for the Artist, if it does not exist yet.
+    fn mint_root_callback(&mut self, #[callback_result] result: Result<MintRootResult, near_sdk::PromiseError>, artist: AccountId);
+    /// Callback after FonoRoot minting contract moved the NFT to the buyer. This callback will update balances in IncomeTable
     fn buy_nft_callback(&mut self, #[callback_result] result: Result<bool, near_sdk::PromiseError>, tree_index: TreeIndex);
 }
 
@@ -88,27 +90,18 @@ pub struct Contract {
     /// Large blob storage.
     pub blobs: LookupMap<CryptoHash, AccountId>,
 
-    // **TODO** Implement `pending_nfts` here.  A prepairer-place
-    // We need to know if LookupMap can handle deleting entries from the middle (in_progress_nonce has to go up, we are not repeating IDs)
-    // I think if we use in_progress_nfts.remove(5), when we are doing the actual minting, that way we well get the data in a way that it is also deleted
-    // from this list, IF the transaction goes through, otherwise it will not change
+    /// List of in progress NFTs, an entry here can be complete, but can be incomplete as well (not ready to be minted)
     pub in_progress_nfts: LookupMap<u64, InProgressMetadata>,
-
-    // **TODO** Implement in_progress_nonce here
+    /// Identifier for in_progress_nfts
     pub in_progress_nonce: u64,
-
-    // **TODO** Implement Catalogues here
+    /// List of Catalogue-s. Every Artist has a Catalogue.
     pub catalogues: LookupMap<AccountId, Catalogue>,
-
-    // **TODO** Implement Income Tables
+    /// Chronological list of NFTs, contains information on income and other things, for example price.
     pub income_tables:  TreeMap<TreeIndex, IncomeTable>,
-
-    // **TODO** We might do this, but not sure yet. The original problem is, Key in TreeMap can't be string.
-    // This way we would have an iterable, ordered collection of all the NFTs, but we couldn't point to an element by contract+root_id, but with this helper, we could
-    // We could call it uniq_id_to_tree_index
+    /// This map solves the problem that a TreeMap can't have non iterable keys.
+    /// For example "example-contract.near-fono-root-2" -> 5   This is what it is doing
     pub uniq_id_to_tree_index: UnorderedMap<UniqId, TreeIndex>,           //UniqIdStore
-
-    // **TODO** It gets even more complicated, because we need a nonce as well.
+    /// Nonce for income_tables. This is the unique identifier for an NFT
     pub tree_index: TreeIndex,
 }
 
@@ -191,57 +184,52 @@ impl Contract {
     pub fn mint_root_callback(
         &mut self, 
         #[callback_result] result: Result<MintRootResult, near_sdk::PromiseError>,
-        custom: AccountId   // most likely custom could be renamed to anything. It's safer to use this instead of env::signer_account_id()
-    ) {
-        // If the entry exists in IncomeTable, that means that the NFT exists. 
-        // This is the single-point-of-truth, IncomeTable could be iterated for example to get a list of NFTs
-
+        artist: AccountId
+    ) {        
         if result.is_err() {
-            env::log_str("Error.");
-            //panic_str!("Error.");
-            //false
+            panic!("MintRoot promise come back with an error.");
         }
 
         let mint_root_result: MintRootResult = result.unwrap();
-
-        log!("Mint Root Callback. All good.");
-        log!("Custom: {:?}", custom.clone());
+        log!("Entering MintRootCallback ...");
+        log!("Artist: {:?}", artist.clone());
         log!("Contract: {:?}", mint_root_result.contract);
         log!("RootID: {:?}", mint_root_result.root_id);
-        log!("Predecessor account ID: {:?}", env::predecessor_account_id());
-        log!("Signer account ID: {:?}", env::signer_account_id());
-        let uniq_id = format!("{}-{}", mint_root_result.contract, mint_root_result.root_id);
+        let uniq_id = UniqId::new(mint_root_result.contract.clone(), mint_root_result.root_id.clone());
         log!("Uniq ID: {:?}", uniq_id);
+
+        assert_eq!(
+            self.income_tables.contains_key(&self.tree_index),
+            false,
+            "Duplicate TreeIndex error!"
+        );
+
+        assert_eq!(
+            self.uniq_id_to_tree_index.get(&uniq_id),
+            None,
+            "The UniqId already exists!"
+        );
 
         let new_income_table = IncomeTable {
             total_income: 0,
             current_balance: 0,
             root_id: mint_root_result.root_id,
             contract: mint_root_result.contract,
-            owner: custom.clone(),
+            owner: artist.clone(),
             price: None
         };
-
-        // !! Be carefull not to wipe the total_income by somehow tricking the contract into believing that this is a new RootNFT, when it isn't!
-        //UniqId::new(mint_root_result.contract, mint_root_result.root_id);
 
         self.uniq_id_to_tree_index.insert(&uniq_id, &self.tree_index);
         self.income_tables.insert(&self.tree_index, &new_income_table);
         
         // Get existing catalogue for artist, or create a new one
-        let mut catalogue_for_owner = self.catalogues.get(&custom).unwrap_or_else(|| -> Catalogue {
-            // Obviously we will skip numbers, but that's not the point, the important thing is that there is no collision.
-            Catalogue::new(StorageKeys::ArtistCatalogue(self.tree_index))
+        let mut catalogue_for_owner = self.catalogues.get(&artist).unwrap_or_else(|| -> Catalogue {            
+            Catalogue::new(StorageKeys::ArtistCatalogue(self.tree_index))                   // We will skip numbers, but that's not the point, the important thing is that there is no collision.
         });
-        log!("Catalogue for owner: {:?}", catalogue_for_owner);
-        // Insert an empty entry for the newly minted song
-        catalogue_for_owner.insert(&self.tree_index, &None);
-        log!("Catalogue for owner after insert: {:?}", catalogue_for_owner);
-        // Insert back the catalogue to the artist
-        self.catalogues.insert(&custom, &catalogue_for_owner);
-        
-        self.tree_index = self.tree_index + 1;
-        //true
+
+        catalogue_for_owner.insert(&self.tree_index, &None);                                // Insert an empty entry for the newly minted song
+        self.catalogues.insert(&artist, &catalogue_for_owner);                              // Insert back the catalogue to the artist
+        self.tree_index = self.tree_index + 1;                                              // Increment TreeIndex
     }    
 }
 

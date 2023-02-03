@@ -79,7 +79,7 @@ export async function createGroup(group) {
   let proposalId = -1;
   const args = {
     proposal: {
-      description: "Create Master Group",
+      description: `Create Master Group - ${group}`,
       kind: {
         ChangePolicyAddOrUpdateRole: {
           role: {
@@ -91,7 +91,11 @@ export async function createGroup(group) {
               "MintRoot:*",
               "PrepairNft:*",
               "UpdatePrepairedNft:*",
+              "CreateRevenueTable:*",
+              "AlterRevenueTable:*",
               "ScheduleMint:*"
+              // **TODO** THIS NEEDS TO BE UPDATED
+              // Theoretically, if we properly fill this section, and do a new Create Master Group call, and remove "all", it should be correct, it should work.
             ],
             vote_policy: {
               // Should be 1 / Infinity
@@ -302,6 +306,35 @@ export async function registerUser(user, group) {
     })
     .catch((err) => console.error(`There was an error while trying to add ${user} to ${group}: `, err));
   
+  return proposalId;
+}
+
+// Payout Revenue
+export async function payout(treeIndexList) {
+  let proposalId = -1;
+  
+  console.log("treeIndexList", treeIndexList);
+  const args = {
+    proposal: {
+      description: `Payout the songs with the following TreeIndexes: ${treeIndexList}`,
+      kind: {
+        PayoutRevenue: {
+          tree_index_list: treeIndexList,
+        }
+      }
+    }
+  };
+
+  const gas = 100000000000000;
+  const amount = utils.format.parseNearAmount("0");
+
+  await window.contract.add_proposal(args, gas, amount)
+    .then((msg) => {
+      console.log("Success! (Payout)", msg);
+      proposalId = msg;
+    })
+    .catch((err) => console.error(`There was an error while trying to payout songs with the following TreeIndexes: ${treeIndexList}`, err));
+
   return proposalId;
 }
 

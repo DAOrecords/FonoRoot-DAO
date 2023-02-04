@@ -12,7 +12,7 @@ pub use crate::policy::{
     default_policy, Policy, RoleKind, RolePermission, VersionedPolicy, VotePolicy,
 };
 use crate::proposals::VersionedProposal;
-pub use crate::proposals::{Proposal, ProposalInput, ProposalKind, ProposalStatus, ActionCall};
+pub use crate::proposals::{Proposal, ProposalInput, ProposalKind, ProposalStatus};
 pub use crate::types::*;
 use crate::upgrade::{internal_get_factory_info, internal_set_factory_info, FactoryInfo};
 pub use crate::views::{BountyOutput, ProposalOutput};
@@ -167,16 +167,6 @@ impl Contract {
     /// Returns factory information, including if auto update is allowed.
     pub fn get_factory_info(&self) -> FactoryInfo {
         internal_get_factory_info()
-    }
-
-    /// A very simple test that will show us whether we are ready to work with Satori or not
-    pub fn satori_test() {
-        // 1 . Do a Cross-Contract-Call to the Satori contract
-        // 2 . Get result
-        // 3 . From the result, read the field that we need
-        // 4. Log the result of the test
-        //    -> "Ok"
-        //    -> "Unauthorized"
     }
 
     /// Callback for MintRoot, this function will create the IncomeTable entry

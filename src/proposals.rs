@@ -35,7 +35,6 @@ pub enum ProposalStatus {
 }
 
 /// Function call arguments.
-// **WARNING** Everything was rewritten as pub
 #[derive(BorshSerialize, BorshDeserialize, Serialize, Deserialize)]
 #[cfg_attr(not(target_arch = "wasm32"), derive(Clone, Debug))]
 #[serde(crate = "near_sdk::serde")]
@@ -119,10 +118,10 @@ pub enum ProposalKind {
     MintRoot { id: u64 },
     /// PrepairNft will create an InProgressMetadata object, that can be half-ready.
     PrepairNft { nft_data: NftDataFromFrontEnd },
-    /// The user can update values for already existing InProgressMetadata object
+    /// The user can update values for already existing InProgressMetadata object, still does not need to be ready for mint
     UpdatePrepairedNft { id: u64, new_nft_data: NftDataFromFrontEnd },
-    /// Create a RevenueTable for a song that was already minted
-    CreateRevenueTable { id: TokenId,  contract: AccountId, unsafe_table: HashMap<AccountId, u64>, price: SalePriceInYoctoNear },
+    /// Create a RevenueTable for a song that was already minted (NFT has to exist at this point)
+    CreateRevenueTable { root_id: TokenId,  contract: AccountId, unsafe_table: HashMap<AccountId, u64>, price: SalePriceInYoctoNear },
     /// Update the RevenueTable for a song that already has a RevenueTable
     AlterRevenueTable { tree_index: TreeIndex, unsafe_table: HashMap<AccountId, u64>, price: SalePriceInYoctoNear }, 
     // ** TODO**
@@ -154,7 +153,7 @@ impl ProposalKind {
                 "policy_update_default_vote_policy"
             }
             ProposalKind::ChangePolicyUpdateParameters { .. } => "policy_update_parameters",
-            // **TODO** Add the same functions here as above
+            // The below proposals are part of FonoRoot-DAO
             ProposalKind::MintRoot { .. } => "mint_root",
             ProposalKind::PrepairNft { .. } => "prepair_nft",
             ProposalKind::UpdatePrepairedNft { .. } => "update_prepaired_nft",
@@ -444,9 +443,12 @@ impl Contract {
                 };
                 
                 let extra = near_sdk::serde_json::to_string( &MintingContractExtra {        // extra will be a JSON string, that we will insert into the metadata
-                    music_cid: selected_draft.music.unwrap(),
+                    music_cid: Some(selected_draft.music.unwrap()),
                     music_hash: None,
+                    animation_url: Some(selected_draft.animation_url.unwrap()),
+                    animation_url_hash: None,
                     parent: None,
+                    next_buyable: None,
                     instance_nonce: 999_999_999,
                     generation: 999_999_999,
                 }).unwrap();
@@ -504,6 +506,19 @@ impl Contract {
             ProposalKind::PrepairNft { nft_data } => {
                 self.assert_artist_can_mint(nft_data.contract.clone());                     // Artist needs to be member of the master group of the minting contract
 
+                if nft_data.image_cid.is_some()  {                                          // Assertations about the existence of the hash values, for each CID
+                    assert!(nft_data.image_hash.is_some(), "Hash has to exist, if image exists!");
+                }
+                if nft_data.music_folder_cid.is_some()  {
+                    assert!(nft_data.music_folder_hash.is_some(), "Hash has to exist, if music folder exists!");
+                }
+                if nft_data.animation_url.is_some() {
+                    assert!(nft_data.animation_url_hash.is_some(), "Hash has to exist, if music exists!");
+                }
+                if nft_data.meta_json_cid.is_some()  {
+                    assert!(nft_data.meta_json_hash.is_some(), "Hash has to exist, if meta exists!");
+                }
+
                 let the_new_nft_data = InProgressMetadata {                                 // This can be incomplete, might not be ready to mint
                     id: self.in_progress_nonce,
                     initiated: env::block_timestamp(),
@@ -513,10 +528,15 @@ impl Contract {
                     title: nft_data.title.clone(),
                     desc: nft_data.desc.clone(),
                     image: nft_data.image_cid.clone(),
+                    image_hash: nft_data.image_hash.clone(),
                     music: nft_data.music_folder_cid.clone(),
+                    music_hash: nft_data.music_folder_hash.clone(),
+                    animation_url: nft_data.animation_url.clone(),
+                    animation_url_hash: nft_data.animation_url_hash.clone(),
                     meta: nft_data.meta_json_cid.clone(),
+                    meta_hash: nft_data.meta_json_hash.clone()
                 };
-                
+
                 self.in_progress_nfts.insert(&self.in_progress_nonce, &the_new_nft_data);
                 self.in_progress_nonce = self.in_progress_nonce + 1;
                 PromiseOrValue::Value(())
@@ -525,12 +545,24 @@ impl Contract {
                 self.assert_artist_can_mint(new_nft_data.contract.clone());
                 let old_data = self.in_progress_nfts.get(&id).unwrap();
 
-                // By this we also make sure that the user can't insert an item into a LookUpMap to an arbitrary position, for example, after the nonce
-                assert_eq!(
-                    &old_data.artist,
+                assert_eq!(                                                                // By this we also make sure that the user can't insert an item into the 
+                    &old_data.artist,                                                      // LookUpMap to an arbitrary position, for example, after the nonce
                     &env::predecessor_account_id(),
                     "You can only update prepaired NFTs that you originally created!"
                 );
+
+                if new_nft_data.image_cid.is_some()  {                                      // Assertations about the existence of the hash values, for each CID
+                    assert!(new_nft_data.image_hash.is_some(), "Hash has to exist, if image exists!");
+                }
+                if new_nft_data.music_folder_cid.is_some()  {
+                    assert!(new_nft_data.music_folder_hash.is_some(), "Hash has to exist, if music folder exists!");
+                }
+                if new_nft_data.animation_url.is_some() {
+                    assert!(new_nft_data.animation_url_hash.is_some(), "Hash has to exist, if music exists!");
+                }
+                if new_nft_data.meta_json_cid.is_some()  {
+                    assert!(new_nft_data.meta_json_hash.is_some(), "Hash has to exist, if meta exists!");
+                }
 
                 let updated_nft_data = InProgressMetadata {                                 // This can be incomplete, might not be ready to mint
                     id: id.clone(),                                                         // (would need a second update in that case)
@@ -541,32 +573,31 @@ impl Contract {
                     title: new_nft_data.title.clone(),
                     desc: new_nft_data.desc.clone(),
                     image: new_nft_data.image_cid.clone(),
+                    image_hash: new_nft_data.image_hash.clone(),
                     music: new_nft_data.music_folder_cid.clone(),
+                    music_hash: new_nft_data.music_folder_hash.clone(),
+                    animation_url: new_nft_data.animation_url.clone(),
+                    animation_url_hash: new_nft_data.animation_url_hash.clone(),
                     meta: new_nft_data.meta_json_cid.clone(),
+                    meta_hash: new_nft_data.meta_json_hash.clone()
                 };
 
                 self.in_progress_nfts.insert(id, &updated_nft_data);
 
                 PromiseOrValue::Value(())
             },
-            ProposalKind::CreateRevenueTable { id, contract, unsafe_table, price } => {
-                // Create a revenue table for a RootNFT that was already created
-                let uniq_id = UniqId::new(contract.clone(), id.clone());
+            ProposalKind::CreateRevenueTable { root_id, contract, unsafe_table, price } => {
+                let uniq_id = UniqId::new(contract.clone(), root_id.clone());               // Will calculate an ID like minting-contract.near-fono-root-5
                 let tree_index = self.uniq_id_to_tree_index.get(&uniq_id.clone()).unwrap();
                 let mut income_table = self.income_tables.get(&tree_index.clone()).unwrap();
-                let revenue_table = RevenueTable::new(unsafe_table.clone()).unwrap();
-
-                log!("Uniq ID: {:?}", uniq_id.clone());
-                log!("Tree Index: {:?}", tree_index.clone());
-                log!("Income Table: {:?}", income_table.clone());
-                log!("Revenue Table from front end: {:?}", revenue_table);
-                log!("Price from front end: {:?}", price);
+                let revenue_table = RevenueTable::new(unsafe_table.clone()).unwrap();       // RevenueTable type is doing validation
+                log!("Creating RevenueTable for UniqId {:?}, for which the TreeIndex is {}", uniq_id.clone(), tree_index.clone());
                 
-                // Prepair Revenue Entry
-                let mut catalogue_for_caller = self.catalogues.get(&env::signer_account_id()).unwrap();              // Has to exist. Otherwise, panic.
+                // Prepair Revenue Entry, mint_root_callback() creates this entry, if does not exist, panic.
+                let mut catalogue_for_caller = self.catalogues.get(&env::signer_account_id()).unwrap();
                 
                 assert_eq!(                                                                 
-                    income_table.owner,                                                     // Validate that caller has the right to  add new entry.
+                    income_table.owner,                                                     // Validate that caller has the right to add new entry.
                     env::signer_account_id(),
                     "Only the owner (Artist) can alter the revenue table!"
                 );
@@ -579,23 +610,21 @@ impl Contract {
                     revenue_table: revenue_table.clone(),
                 };
                 income_table.price = Some(price.clone());
-                self.income_tables.insert(&tree_index.clone(), &income_table);
-                catalogue_for_caller.insert(&tree_index, &Some(new_entry));
-                self.catalogues.insert(&env::signer_account_id(), &catalogue_for_caller);
+                self.income_tables.insert(&tree_index.clone(), &income_table);              // We insert back the IncomeTable, that contains the price now
+                catalogue_for_caller.insert(&tree_index, &Some(new_entry));                 // We insert back the now non-empty CatalogueEntry
+                self.catalogues.insert(&env::signer_account_id(), &catalogue_for_caller);   // Each Artist has a Catalogue
+                
+                log!("RevenueTable created: {:?}", self.catalogues.get(&env::signer_account_id()).unwrap());
 
                 PromiseOrValue::Value(())
             },
             ProposalKind::AlterRevenueTable { tree_index, unsafe_table, price } => {
-                // Update a revenue table for a RootNFT
-                log!("TreeIndex: {:?}", tree_index);
+                log!("Updating RevenueTable with TreeIndex: {}", tree_index);
                 let new_revenue_table = RevenueTable::new(unsafe_table.clone()).unwrap();
                 let mut income_table = self.income_tables.get(&tree_index.clone()).unwrap();
-                log!("The new Revenue Table from front end: {:?}", new_revenue_table);
-                log!("Income Table: {:?}", income_table.clone());
-                log!("New price: {:?}", price);
 
-                // Prepair Revenue Entry
-                let mut catalogue_for_caller = self.catalogues.get(&env::signer_account_id()).unwrap();              // Has to exist. Otherwise, panic.
+                // Prepair Revenue Entry, mint_root_callback() creates this entry, if does not exist, panic.
+                let mut catalogue_for_caller = self.catalogues.get(&env::signer_account_id()).unwrap();
                 
                 assert_eq!(                                                                 // Validate that caller has the right to modify this entry
                     income_table.owner,
@@ -607,9 +636,9 @@ impl Contract {
                     revenue_table: new_revenue_table.clone(),
                 };
                 income_table.price = Some(price.clone());
-
-                catalogue_for_caller.insert(&tree_index, &Some(new_entry));
-                self.catalogues.insert(&env::signer_account_id(), &catalogue_for_caller);
+                self.income_tables.insert(&tree_index.clone(), &income_table);              // We insert back the IncomeTable, that contains the price now
+                catalogue_for_caller.insert(&tree_index, &Some(new_entry));                 // We insert back the updated CatalogueEntry
+                self.catalogues.insert(&env::signer_account_id(), &catalogue_for_caller);   // Each Artist has a Catalogue
 
                 log!("New RevenueTable entry was inserted: {:?}", self.catalogues.get(&env::signer_account_id()).unwrap());
 
@@ -821,10 +850,6 @@ impl Contract {
                     matches!(proposal.status, ProposalStatus::InProgress),
                     "ERR_PROPOSAL_NOT_READY_FOR_VOTE"
                 );
-                
-                // **TODO** This is where we would do ValidateContractName
-                // Here we would chech if the given user has the right to mint on that specific contract, or he/she only has the right to mint on another contract.
-                // CheckRoleName("admin_nft.soundsplash.near", "nft.soundsplash.near");
 
                 proposal.update_votes(
                     &sender_id,

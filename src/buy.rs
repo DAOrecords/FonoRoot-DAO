@@ -1,4 +1,5 @@
 use crate::*;
+use crate::proposals::{ActionCall};
 
 #[near_bindgen]
 impl Contract {

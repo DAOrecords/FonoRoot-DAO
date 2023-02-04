@@ -134,7 +134,12 @@ export async function prepairNft(newNftDetails) {
             desc: newNftDetails.description,
             image_cid: newNftDetails.image_cid,
             music_folder_cid: newNftDetails.music_cid,
+            animation_url: "QmU51uX3B44Z4pH2XimaJ6eScRgAzG4XUrKfsz1yWVCo6f",          // It seems to be that this is the standard, but we don't want to drop music_folder_cid yet
             meta_json_cid: newNftDetails.meta_cid,
+            image_hash: "b998a892a29f38b112565a2face94d8137885505e86db9df520dc9bc80d6c6bf",
+            music_folder_hash: "b998a892a29f38b112565a2face94d8137885505e86db9df520dc9bc80d6c6bf",
+            meta_json_hash: "b998a892a29f38b112565a2face94d8137885505e86db9df520dc9bc80d6c6bf",
+            animation_url_hash: "b998a892a29f38b112565a2face94d8137885505e86db9df520dc9bc80d6c6bf"
           }
         }
       }
@@ -171,7 +176,12 @@ export async function updateNft(id, updatedNftDetails) {
             desc: updatedNftDetails.description,
             image_cid: updatedNftDetails.image_cid,
             music_folder_cid: updatedNftDetails.music_cid,
+            animation_url: "QmU51uX3B44Z4pH2XimaJ6eScRgAzG4XUrKfsz1yWVCo6f",          // It seems to be that this is the standard, but we don't want to drop music_folder_cid yet
             meta_json_cid: updatedNftDetails.meta_cid,
+            image_hash: "b998a892a29f38b112565a2face94d8137885505e86db9df520dc9bc80d6c6bf",
+            music_folder_hash: "b998a892a29f38b112565a2face94d8137885505e86db9df520dc9bc80d6c6bf",
+            meta_json_hash: "b998a892a29f38b112565a2face94d8137885505e86db9df520dc9bc80d6c6bf",
+            animation_url_hash: "b998a892a29f38b112565a2face94d8137885505e86db9df520dc9bc80d6c6bf"
           }
         }
       }
@@ -228,7 +238,7 @@ export async function createRevenue(rootId, contract, revenueTable, price) {
       description: `Create Revenue Table for  uniqID: ${contract}-${rootId}`,
       kind: {
         CreateRevenueTable: {
-          id: rootId,
+          root_id: rootId,
           contract: contract,
           unsafe_table: revenueTable,
           price: utils.format.parseNearAmount(price)

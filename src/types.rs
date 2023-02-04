@@ -4,6 +4,7 @@ use near_sdk::serde::{Deserialize, Serialize};
 use near_sdk::{AccountId, Balance, Gas, log};
 use near_sdk::collections::{UnorderedMap};
 use std::collections::HashMap;
+use regex::Regex;
 
 /// Account ID used for $NEAR in near-sdk v3.
 /// Need to keep it around for backward compatibility.
@@ -67,11 +68,13 @@ pub enum Action {
 /// Combination of MintingContract+RootId (e.g. "minting-contract.near-fono-root-2")
 #[derive(BorshSerialize, BorshDeserialize, Serialize, Deserialize, Debug, Clone)]
 #[serde(crate = "near_sdk::serde")]
-pub struct UniqId (String);
+pub struct UniqId(String);
 
 pub type SalePriceInYoctoNear = U128;
+
 /// This is the same variable that is used in the FonoRoot minting contract (e.g. "fono-root-2-5", "fono-root-2")
 pub type TokenId = String;
+
 /// Unique identifier of an NFT, a number. A UniqId will map to a TreeIndex
 pub type TreeIndex = u64;
 
@@ -95,7 +98,7 @@ pub struct InProgressMetadata {
     pub artist: AccountId,
     /// Minting contract. The NFT will live on this contract.
     pub contract: AccountId,
-    /// It is not sure that we will have this field
+    /// **TODO** It is not sure that we will have this field. For this, we would need to implement the ScheduleMint proposal.
     pub scheduled: Option<u64>,
     /// Title of the NFT, follows NFT standard
     pub title: Option<String>,
@@ -103,10 +106,20 @@ pub struct InProgressMetadata {
     pub desc: Option<String>,
     /// Metadata, does not follow standard, here inside this we will have fields that record labels usually use. This is an IPFS CID
     pub meta: Option<String>,
+    /// SHA256 hash of the meta object. Has to be Some, if meta is supplied
+    pub meta_hash: Option<Base64VecU8>,
     /// Image, according to NFT standard. It will be an IPFS CID
     pub image: Option<String>,
+    /// SHA256 hash of the image. Has to be Some, if image is supplied
+    pub image_hash: Option<Base64VecU8>,
     /// Music folder, not part of NFT standard. This is an IPFS CID, and it points to a folder that has different quality files of the same song.
     pub music: Option<String>,          // currently this is a music file, but we want to change that in the future
+    /// SHA256 hash of the music folder. Has to be Some, if music is supplied
+    pub music_hash: Option<Base64VecU8>,
+    /// Single music file that is compatible with OpenSea
+    pub animation_url: Option<String>,
+    /// SHA256 hash of the music. Has to be Some if music is supplied
+    pub animation_url_hash: Option<Base64VecU8>
 }
 
 /// These are the parameters the FonoRoot minting contract will take as input, when we mint a new RootNFT
@@ -131,7 +144,7 @@ pub struct MintingContractMeta {
     pub title: String,                      // This is `title` in InProgressMetadata
     pub description: String,                // This is `desc` in InProgressMetadata
     pub media: String,                      // This is `image` in InProgressMetadata
-    pub media_hash: Option<Base64VecU8>,    // We will have to do this later
+    pub media_hash: Option<Base64VecU8>,    // This is `image_hash` in InProgressMetadata
     pub copies: Option<u64>,                // We will pass None
     pub issued_at: Option<u64>,             // We will pass None
     pub expires_at: Option<u64>,            // We will pass None
@@ -139,31 +152,38 @@ pub struct MintingContractMeta {
     pub updated_at: Option<u64>,            // We will pass None
     pub extra: Option<String>,              // This is JSON-stringified version of MintingContractExtra
     pub reference: String,                  // This is `meta` in InProgressMetadata
-    pub reference_hash: Option<Base64VecU8>,// **TODO** We will have to do this later
+    pub reference_hash: Option<Base64VecU8>,// This is `meta_hash` in InProgressMetadata
 }
 
 /// Exact copy of Extra, from Fono-Root
 #[derive(BorshSerialize, BorshDeserialize, Serialize, Deserialize, Debug)]
 #[serde(crate = "near_sdk::serde")]
 pub struct MintingContractExtra {
-    pub music_cid: String,                                      // This is `music` in InProgressMetadata
-    pub music_hash: Option<Base64VecU8>,                        // We will pass None
+    pub music_cid: Option<String>,                              // This is `music` in InProgressMetadata
+    pub music_hash: Option<Base64VecU8>,                        // This is `music_hash` in InProgressMetadata
+    pub animation_url: Option<String>,                          // This is animation_url in InProgressMetadata
+    pub animation_url_hash: Option<Base64VecU8>,                // This is animation_url_hash in InProgressMetadata
     pub parent: Option<TokenId>,                                // We will pass None
     pub instance_nonce: u32,                                    // We will pass a very lare namber, the MintingContract will overwrite it
     pub generation: u32,                                        // We will pass a very lare namber, the MintingContract will overwrite it
+    pub next_buyable: Option<u32>                               // We will pass None
 }
 
-/// Data that is sent from the front-end, can be half-ready
+/// Data that is sent from the front end, can be half-ready
 #[derive(BorshSerialize, BorshDeserialize, Serialize, Deserialize, Clone, Debug)]
 #[serde(crate = "near_sdk::serde")]
 pub struct NftDataFromFrontEnd {
-    // **TODO** We will need hash as well.
     pub contract: AccountId,
     pub title: Option<String>,
     pub desc: Option<String>,
     pub image_cid: Option<String>,
+    pub image_hash: Option<Base64VecU8>,                        // If image exists, we need hash for it as well
     pub music_folder_cid: Option<String>,
-    pub meta_json_cid: Option<String>
+    pub music_folder_hash: Option<Base64VecU8>,                 // If music exists, we need hash for it as well
+    pub animation_url: Option<String>,
+    pub animation_url_hash: Option<Base64VecU8>,                // If animation_url exists, we need has for it as well
+    pub meta_json_cid: Option<String>,
+    pub meta_json_hash: Option<Base64VecU8>                     // If meta exists, we need hash for it as well
 }
 
 /// A Catalogue for an Artist. Each Artist has a Catalogue. In Contract, catalogues LookupMap is a list if Catalogue-s. (Artist AccountId is key)
@@ -173,12 +193,12 @@ pub type Catalogue = UnorderedMap<TreeIndex, Option<CatalogueEntry>>;
 /// Each song has a CatalogueEntry, where there is a list of accounts that should be paid out from the income (with percentages)
 #[derive(BorshSerialize, BorshDeserialize, Serialize, Deserialize, Clone, Debug)]
 #[serde(crate = "near_sdk::serde")]
-pub struct CatalogueEntry {
-    pub revenue_table: RevenueTable,     // price used to be here, that's why this is a struct
-    // we will probably keep this a struct, because we might add more fields later.
+pub struct CatalogueEntry {                                     // Price used to be here, that's why this is a struct
+    pub revenue_table: RevenueTable,                            // We will keep this a struct, because we might add more fields later.
 }
 
 // **TODO** This is just a placeholder
+// **TODO** We either need to keep ScheduleMint, or we need some kind of special Role, like CronCat, which is allowed to mint, even if it is not the Artist.
 pub type ScheduleMintParams = String;
 
 /// IncomeTable is a very important object, that is used for other things as well, because this is most easily iterable.
@@ -232,8 +252,6 @@ impl RevenueTable {
 }
 impl IntoIterator for RevenueTable {
     type Item = (AccountId, u64);
-    //type RevItKey = AccountId;
-    //type RevItValue = u64;
     type IntoIter = std::collections::hash_map::IntoIter<AccountId, u64>;
 
     fn into_iter(self) -> Self::IntoIter {
@@ -243,10 +261,9 @@ impl IntoIterator for RevenueTable {
 
 impl UniqId {
     pub fn new(contract: AccountId, root_id: TokenId) -> UniqId {
-        /*if contract.is_empty() || root_id.is_empty() {
-            panic!("Contract should be valid AccountId and root_id should be valid FonoRoot RootID");
-        }*/
-        // We could write different kind of restrains here, but the first restrain is that first part is AccountId and second part is TokenId
+        let root_id_regex = Regex::new(r"fono-root-[0-9]{1,}").unwrap();
+        assert!(root_id_regex.is_match(&root_id), "RootID is not valid!");
+        assert!(contract.to_string().parse::<AccountId>().is_ok(), "AccountId is not valid!");
         UniqId(format!("{}-{}", contract, root_id))
     }
 }

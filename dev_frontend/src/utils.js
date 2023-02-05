@@ -88,12 +88,13 @@ export async function createGroup(group) {
               Group: []
             },
             permissions: [
-              "MintRoot:*",
-              "PrepairNft:*",
-              "UpdatePrepairedNft:*",
-              "CreateRevenueTable:*",
-              "AlterRevenueTable:*",
-              "ScheduleMint:*"
+              "mint_root:*",
+              "prepair_nft:*",
+              "update_prepaired_nft:*",
+              "create_revenue_table:*",
+              "alter_revenue_table:*",
+              "payout_revenue:*"
+              //"ScheduleMint:*"
               // **TODO** THIS NEEDS TO BE UPDATED
               // Theoretically, if we properly fill this section, and do a new Create Master Group call, and remove "all", it should be correct, it should work.
             ],

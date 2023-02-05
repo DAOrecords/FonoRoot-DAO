@@ -44,7 +44,7 @@ pub enum StorageKeys {
     ArtistCatalogue(u64)
 }
 
-/// After payouts, allows a callback
+/// Function signatures of the callbacks that we have
 #[ext_contract(ext_self)]
 pub trait ExtSelf {
     /// Callback after proposal execution.
@@ -175,18 +175,14 @@ impl Contract {
         &mut self, 
         #[callback_result] result: Result<MintRootResult, near_sdk::PromiseError>,
         artist: AccountId
-    ) {        
+    ) {
         if result.is_err() {
             panic!("MintRoot promise come back with an error.");
         }
 
         let mint_root_result: MintRootResult = result.unwrap();
-        log!("Entering MintRootCallback ...");
-        log!("Artist: {:?}", artist.clone());
-        log!("Contract: {:?}", mint_root_result.contract);
-        log!("RootID: {:?}", mint_root_result.root_id);
         let uniq_id = UniqId::new(mint_root_result.contract.clone(), mint_root_result.root_id.clone());
-        log!("Uniq ID: {:?}", uniq_id);
+        log!("MintRootCallback started! Uniq ID: {:?}", uniq_id);
 
         assert_eq!(
             self.income_tables.contains_key(&self.tree_index),
@@ -200,8 +196,8 @@ impl Contract {
             "The UniqId already exists!"
         );
 
-        let new_income_table = IncomeTable {
-            total_income: 0,
+        let new_income_table = IncomeTable {                                                // We create an new IncomeTable, balances are zero
+            total_income: 0,                                                                // Price is not set. Price is set by CreateRevenueTable proposal
             current_balance: 0,
             root_id: mint_root_result.root_id,
             contract: mint_root_result.contract,
@@ -213,13 +209,16 @@ impl Contract {
         self.income_tables.insert(&self.tree_index, &new_income_table);
         
         // Get existing catalogue for artist, or create a new one
-        let mut catalogue_for_owner = self.catalogues.get(&artist).unwrap_or_else(|| -> Catalogue {            
-            Catalogue::new(StorageKeys::ArtistCatalogue(self.tree_index))                   // We will skip numbers, but that's not the point, the important thing is that there is no collision.
+        let mut catalogue_for_owner = self.catalogues.get(&artist).unwrap_or_else(|| -> Catalogue {
+            log!("Creating new Catalogue for Artist {}, the TreeIndex is {}", artist, self.tree_index);
+            Catalogue::new(StorageKeys::ArtistCatalogue(self.tree_index))                   // We will skip numbers, but that's not a problem, the important thing is that there is no collision.
         });
 
         catalogue_for_owner.insert(&self.tree_index, &None);                                // Insert an empty entry for the newly minted song
         self.catalogues.insert(&artist, &catalogue_for_owner);                              // Insert back the catalogue to the artist
         self.tree_index = self.tree_index + 1;                                              // Increment TreeIndex
+
+        log!("MintRootCallback exiting, empty entry was inserted for the new song.");
     }    
 }
 

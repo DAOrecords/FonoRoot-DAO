@@ -135,8 +135,9 @@ impl Default for VotePolicy {
     fn default() -> Self {
         VotePolicy {
             weight_kind: WeightKind::RoleWeight,
-            quorum: U128(0),
-            threshold: WeightOrRatio::Ratio(1, 2),
+            quorum: U128(1),
+            //threshold: WeightOrRatio::Ratio(1, 2),
+            threshold: WeightOrRatio::Weight(U128::from(1)),
         }
     }
 }

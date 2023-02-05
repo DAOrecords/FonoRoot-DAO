@@ -431,7 +431,7 @@ impl Contract {
                 PromiseOrValue::Value(())
             }
             ProposalKind::MintRoot { id } => {
-                log!("Entering MintRoot...");
+                log!("Entering MintRoot, InProgress ID: {}", id);
 
                 let selected_draft = self.in_progress_nfts.remove(id).unwrap();             // If this contract call is successfull, the draft will be removed from the list
                 let fonoroot: AccountId =  selected_draft.contract;
@@ -444,26 +444,26 @@ impl Contract {
                 
                 let extra = near_sdk::serde_json::to_string( &MintingContractExtra {        // extra will be a JSON string, that we will insert into the metadata
                     music_cid: Some(selected_draft.music.unwrap()),
-                    music_hash: None,
+                    music_hash: Some(selected_draft.music_hash.unwrap()),
                     animation_url: Some(selected_draft.animation_url.unwrap()),
-                    animation_url_hash: None,
+                    animation_url_hash: Some(selected_draft.animation_url_hash.unwrap()),
                     parent: None,
                     next_buyable: None,
                     instance_nonce: 999_999_999,
                     generation: 999_999_999,
                 }).unwrap();
 
-                // Validation should happen at this point. That validation that the param exists is already done by .unwrap()
-                // We need to add hashes for `reference`, `media`, and `music_cid`
-                let args = MintingContractArgs {
+                // That validation that the param exists is already done by .unwrap() We could also validate title and description length, and possible the CID and the hash format.
+                // We will skip these validations for know, because we trust that the Artist is not hacking the front end (Artist has to be approved by Council)
+                let args = MintingContractArgs {                                  // By .unwrap(), we are validating that the parameter exists
                     receiver_id: selected_draft.artist.clone(),
-                    metadata: MintingContractMeta {
+                    metadata: MintingContractMeta { 
                         title: selected_draft.title.unwrap(),
                         description: selected_draft.desc.unwrap(),
                         reference: selected_draft.meta.unwrap(),
-                        reference_hash: None,                                     // Will need to do this later
+                        reference_hash: Some(selected_draft.meta_hash.unwrap()),
                         media: selected_draft.image.unwrap(),
-                        media_hash: None,                                         // Will need to do this later
+                        media_hash: Some(selected_draft.image_hash.unwrap()),
                         copies: None,                                             // Will be None, we are not using this.
                         issued_at: None,                                          // Will be None, we are not using this.
                         expires_at: None,                                         // Will be None, we are not using this.
@@ -780,12 +780,12 @@ impl Contract {
         // 0. validate bond attached.
         // TODO: consider bond in the token of this DAO.
         let policy = self.policy.get().unwrap().to_policy();
-
-        assert_eq!(
+        
+        /*assert_eq!(                                                   // We deactivate proposal bond, because only approved accounts can add proposals at this point
             env::attached_deposit(),
             policy.proposal_bond.0,
             "ERR_MIN_BOND"
-        );
+        );*/
 
         // 1. Validate proposal.
         match &proposal.kind {

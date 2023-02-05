@@ -52,8 +52,6 @@ impl Contract {
         ));
         
         log!("Initiating cross-contract call! Function inside DAO contract exiting...");
-
-        // Should send back money if it fails! I guess in that case we wouldn't take the money in the first place, because the transaction would fail.
     }
 
     /// Callback that will run when the NFT was successfully moved to the new owner, the callback is updating the balances in the IncomeTable
@@ -63,15 +61,19 @@ impl Contract {
         #[callback_result] result: Result<bool, near_sdk::PromiseError>,
         tree_index: TreeIndex
     ) {
-        assert_eq!(
-            result.unwrap(),
-            true,
-            "Result should be true."
-        );
-        log!("This NFT was bought: {} (TreeIndex)", tree_index);
         let mut the_income_table = self.income_tables.get(&tree_index).unwrap();
-        the_income_table.total_income = the_income_table.total_income + u128::from(the_income_table.price.unwrap());
-        the_income_table.current_balance = the_income_table.current_balance + u128::from(the_income_table.price.unwrap());
-        self.income_tables.insert(&tree_index, &the_income_table);              // Would the same thing happen without this line? No.
+        let success = result.unwrap_or_else(|error| {                                       // We will send back the money if success is false
+            log!("Result: {:?}", error);
+            false
+        });
+        if success {
+            log!("This NFT was bought: {} (TreeIndex) Buyer: {}", tree_index, env::signer_account_id());
+            the_income_table.total_income = the_income_table.total_income + u128::from(the_income_table.price.unwrap());
+            the_income_table.current_balance = the_income_table.current_balance + u128::from(the_income_table.price.unwrap());
+            self.income_tables.insert(&tree_index, &the_income_table);
+        } else {
+            log!("Buying the NFT failed. Sending back money to {}", env::signer_account_id());
+            Promise::new(env::signer_account_id()).transfer(u128::from(the_income_table.price.unwrap()));
+        }
     }
 }

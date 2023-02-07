@@ -113,6 +113,32 @@ impl Contract {
         catalogue_for_artist.to_vec()
     }
 
+    /// Get slice of the Catalogue of an Artist
+    pub fn get_catalogue_slice(&self, artist: AccountId, from_index: u64, limit: u64) -> Vec<(TreeIndex, Option<CatalogueEntry>)> {
+        let catalogue_for_artist = self.catalogues.get(&artist).unwrap();
+        let catalogue_as_vec = catalogue_for_artist.to_vec();
+
+        let start: usize = from_index as usize;
+        let end: usize = min(catalogue_for_artist.len(), from_index + limit) as usize;
+
+        catalogue_as_vec[start .. end].to_vec()
+    }
+
+    /// Get specific Catalogue entries for Artist
+    pub fn get_catalogue_entries(&self, artist: AccountId, list: Vec<TreeIndex>) -> Vec<(TreeIndex, Option<CatalogueEntry>)> {
+        let catalogue_for_artist = self.catalogues.get(&artist).unwrap();
+        let mut result_vec = Vec::new();
+
+        for index in list {
+            result_vec.push((
+                index,
+                catalogue_for_artist.get(&index).unwrap()
+            ));
+        }
+
+        result_vec
+    }
+
     /// Get a single IncomeTable
     pub fn get_single_income_table(&self, id: TreeIndex) -> IncomeTable {
         self.income_tables.get(&id).unwrap()
@@ -134,6 +160,32 @@ impl Contract {
         let end = from_index + limit;
         self.income_tables.range((Bound::Included(from_index), Bound::Excluded(end)))
             .collect::<Vec<(TreeIndex, IncomeTable)>>()
+    }
+
+    /// Get TreeIndex from MintingContract and RootID, which are the components of UniqId
+    pub fn get_tree_index(&self, minting_contract: AccountId, root_id: TokenId) -> Option<TreeIndex> {
+        let uniq_id = UniqId::new(minting_contract, root_id);
+        self.uniq_id_to_tree_index.get(&uniq_id)
+    }
+
+    /// Get the whole UniqId -> TreeIndex map
+    pub fn get_all_tree_index(&self) -> Vec<(UniqId, TreeIndex)> {
+        self.uniq_id_to_tree_index.to_vec()
+    }
+
+    /// Get slice of the UniqId -> TreeIndex mapping
+    pub fn get_tree_index_slice(&self, from_index: u64, limit: u64) -> Vec<(UniqId, TreeIndex)> {
+        let id_to_index_as_vec = self.uniq_id_to_tree_index.to_vec();
+
+        let start: usize = from_index as usize;
+        let end: usize = min(id_to_index_as_vec.len(), (from_index + limit) as usize) as usize;
+
+        id_to_index_as_vec[start .. end].to_vec()
+    }
+
+    /// Get number of NFTs that are registered with the DAO, this is equal to the current TreeIndex nonce
+    pub fn get_number_of_nfts(&self) -> TreeIndex {
+        self.tree_index
     }
 
     /// Get specific proposal.

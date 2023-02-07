@@ -781,7 +781,7 @@ impl Contract {
         // TODO: consider bond in the token of this DAO.
         let policy = self.policy.get().unwrap().to_policy();
         
-        /*assert_eq!(                                                   // We deactivate proposal bond, because only approved accounts can add proposals at this point
+        assert_eq!(                                                   // We deactivate proposal bond, because only approved accounts can add proposals at this point
             env::attached_deposit(),
             policy.proposal_bond.0,
             "ERR_MIN_BOND"
@@ -962,13 +962,12 @@ impl Contract {
     }
 
     /// Helper function that creats a revenue payout object
-    pub fn generate_payout_object(&self, revenue: RevenueTable, price: Balance, max_len_payout: u32) -> Payout {
+    pub fn generate_payout_object(&self, revenue: RevenueTable, price: Balance, _max_len_payout: u32) -> Payout {
         let mut total = 0;
-        let price_u128 = u128::from(price);
         let mut payout_object = Payout {
             payout: HashMap::new()
         };
-
+        // **WARNING** len needs to be implemented
         //assert!(revenue.len() as u32 <= max_len_payout, "The contract cannot payout to that many receivers");
 
         for (key, percent) in revenue.into_iter() {

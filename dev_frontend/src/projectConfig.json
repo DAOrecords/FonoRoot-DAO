@@ -1,4 +1,5 @@
 {
-  "test": "MotherContractTest-Buy-Flow",
-  "contractName": "mother-contract-test-7.soundsplash.testnet"
+  "test": "MotherContractTest-Quorum-Test",
+  "contractName": "mother-contract-test-8.soundsplash.testnet",
+  "oldcontractName": "mother-contract-test-7.soundsplash.testnet"
 }

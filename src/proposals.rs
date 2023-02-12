@@ -4,6 +4,8 @@ use near_contract_standards::fungible_token::core_impl::ext_fungible_token;
 use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
 use near_sdk::json_types::{Base64VecU8, U128, U64};
 use near_sdk::{log, AccountId, Balance, Gas, PromiseOrValue};
+use near_sdk::serde_json::json;
+
 
 use crate::policy::UserInfo;
 use crate::types::{
@@ -124,8 +126,10 @@ pub enum ProposalKind {
     CreateRevenueTable { root_id: TokenId,  contract: AccountId, unsafe_table: HashMap<AccountId, u64>, price: SalePriceInYoctoNear },
     /// Update the RevenueTable for a song that already has a RevenueTable
     AlterRevenueTable { tree_index: TreeIndex, unsafe_table: HashMap<AccountId, u64>, price: SalePriceInYoctoNear }, 
-    // ** TODO**
+    /// Payout revenue for multiple songs, according to RevenueTable. If the caller does not have the right to initiate payout for some of the songs, that element will be ignored.
     PayoutRevenue { tree_index_list: Vec<TreeIndex> },
+    /// Resend failed transaction to a different address. Only Council members can do this.
+    ResendFailedTransaction { failed_id: u64, new_address: AccountId },
     // **TODO** Not implemented
     ScheduleMint { params: ScheduleMintParams },
 }
@@ -160,6 +164,7 @@ impl ProposalKind {
             ProposalKind::CreateRevenueTable { .. } => "create_revenue_table",
             ProposalKind::AlterRevenueTable { .. }  => "alter_revenue_table",
             ProposalKind::PayoutRevenue { .. } => "payout_revenue",
+            ProposalKind::ResendFailedTransaction { .. } => "resend_failed_transaction",
             ProposalKind::ScheduleMint { .. } => "schedule_mint"
         }
     }
@@ -646,12 +651,6 @@ impl Contract {
             },
             ProposalKind::PayoutRevenue { tree_index_list } => {
                 log!("Payout Revenue from IncomeTable, according to RevenueTable");
-                
-                // We have a list of IncomeTables
-                // Those IncomeTables, for which the caller is owner, will be paid out
-                // There will be a warning, that some of the IncomeTables could not be paid out... don't know how, though.
-
-                // Possibly the Council member can always initiate payout, then the condition is a little bit more complicated
                 let user = UserInfo {
                     account_id: env::signer_account_id(),
                     amount: 0
@@ -659,15 +658,12 @@ impl Contract {
                 let policy = self.policy.get().unwrap().to_policy();
                 let is_admin = policy.get_user_roles(user).contains_key(&"council".to_string());
                 log!("Caller is an admin: {}", is_admin);
-                let mut could_not_pay_out: Vec<TreeIndex> = Vec::new();
+                let mut could_not_pay_out: Vec<TreeIndex> = Vec::new();                           // List of IncomeTables that could not be payed out (by TreeIndex)
                 
                 for index in tree_index_list {
                     let mut current_table = self.income_tables.get(&index).unwrap();
-                    log!("current_table.owner: {}", current_table.owner);
-                    log!("current_table.current_balance: {}", current_table.current_balance);
-                    log!("current_table.total_income: {}", current_table.total_income);
                     let is_owner = current_table.owner == env::signer_account_id();
-                    if is_owner || is_admin {                                                     // RevenueTable payout happens here
+                    if is_owner || is_admin {                                                     // RevenueTable payout happens if caller is owner or Council member
                         let owner_catalogue = self.catalogues.get(&current_table.owner).unwrap();
                         let entry = owner_catalogue.get(&index).unwrap().unwrap();                // This is a CatalogueEntry struct
                         
@@ -677,10 +673,21 @@ impl Contract {
                             6
                         );
 
-                        for (key, amount) in payout_table.payout.iter() {                                // Send the money to each account on the list
+                        for (key, amount) in payout_table.payout.iter() {                         // Send the money to each account on the list
                             let beneficiary = key.clone();
-                            log!("Sending {} yoctoNEAR to {}", u128::from(amount.clone()), beneficiary);
-                            Promise::new(beneficiary).transfer(u128::from(amount.clone()));            // We are not checking if all the promises return without error     
+                            log!("Sending {} yoctoNEAR to {} ...", u128::from(amount.clone()), beneficiary);
+                            Promise::new(beneficiary.clone()).transfer(u128 ::from(amount.clone())).then(
+                                Promise::new(env::current_account_id())
+                                .function_call(
+                                    "transfer_callback".to_string(), 
+                                    json!({
+                                        "beneficiary": beneficiary, 
+                                        "amount": amount 
+                                    }).to_string().as_bytes().to_vec(), 
+                                    0, 
+                                    Gas(2_000_000_000_000
+                                ))
+                            );
                         }
 
                         current_table.current_balance = 0;
@@ -695,6 +702,21 @@ impl Contract {
 
                 PromiseOrValue::Value(())
             },
+            ProposalKind::ResendFailedTransaction { failed_id, new_address } => {
+                let the_failed_transaction = self.failed_transactions.remove(&failed_id).unwrap();
+                let old_address = the_failed_transaction.beneficiary;
+                let amount = the_failed_transaction.amount;
+
+                log!("Resending transaction. Old address: {} New address: {}", old_address, new_address);
+                log!("Sending {} yoctoNEAR to {} ...", u128::from(amount.clone()), new_address);
+                
+                Promise::new(new_address.clone()).transfer(u128 ::from(amount.clone())).then(
+                    Promise::new(env::current_account_id())
+                    .function_call("transfer_callback".to_string(), json!({ "beneficiary": new_address, "amount": U128::from(amount) }).to_string().as_bytes().to_vec(), 0, Gas(2_000_000_000_000))
+                );
+
+                PromiseOrValue::Value(())
+            }
             ProposalKind::ScheduleMint { params: _ } => {
                 //self.assert_artist_can_mint(nft_data.contract.clone());
 
@@ -785,7 +807,7 @@ impl Contract {
             env::attached_deposit(),
             policy.proposal_bond.0,
             "ERR_MIN_BOND"
-        );*/
+        );
 
         // 1. Validate proposal.
         match &proposal.kind {
@@ -962,13 +984,13 @@ impl Contract {
     }
 
     /// Helper function that creats a revenue payout object
-    pub fn generate_payout_object(&self, revenue: RevenueTable, price: Balance, _max_len_payout: u32) -> Payout {
+    pub fn generate_payout_object(&self, revenue: RevenueTable, price: Balance, max_len_payout: u32) -> Payout {
         let mut total = 0;
         let mut payout_object = Payout {
             payout: HashMap::new()
         };
-        // **WARNING** len needs to be implemented
-        //assert!(revenue.len() as u32 <= max_len_payout, "The contract cannot payout to that many receivers");
+        
+        assert!(revenue.len() as u32 <= max_len_payout, "The contract cannot payout to that many receivers");
 
         for (key, percent) in revenue.into_iter() {
             let beneficiary = key.clone();

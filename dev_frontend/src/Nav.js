@@ -8,6 +8,10 @@ export default function Nav() {
     <nav>
       <ul id="navList">
         <li className="navListElement">
+          <Link to={'/create_group'}>Create New Group</Link>
+        </li>
+
+        <li className="navListElement">
           <Link to={'/register_user'}>Registration</Link>
         </li>
 
@@ -46,10 +50,11 @@ export default function Nav() {
         <li className="navListElement">
           <Link to={'/payout'}>Payout</Link>
         </li>
-        
+
         <li className="navListElement">
-          <Link to={'/create_group'}>Create New Group</Link>
+          <Link to={'/failed_transactions'}>Failed Transactions</Link>
         </li>
+        
       </ul>
       {(window.accountId) ? <button onClick={logout}>Logout</button> : <button onClick={login}>Login</button>}
     </nav>

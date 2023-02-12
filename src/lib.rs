@@ -41,6 +41,7 @@ pub enum StorageKeys {
     InProgressNfts,
     IncomeTables,
     UniqueIdToTreeIndex,
+    FailedTransactions,
     ArtistCatalogue(u64)
 }
 
@@ -53,6 +54,9 @@ pub trait ExtSelf {
     fn mint_root_callback(&mut self, #[callback_result] result: Result<MintRootResult, near_sdk::PromiseError>, artist: AccountId);
     /// Callback after FonoRoot minting contract moved the NFT to the buyer. This callback will update balances in IncomeTable
     fn buy_nft_callback(&mut self, #[callback_result] result: Result<bool, near_sdk::PromiseError>, tree_index: TreeIndex);
+
+    /// only a test
+    pub fn transfer_callback(&mut self, #[callback_result] result: Result<String, near_sdk::PromiseError>, beneficiary: AccountId, amount: U128);
 }
 
 #[near_bindgen]
@@ -103,6 +107,10 @@ pub struct Contract {
     pub uniq_id_to_tree_index: UnorderedMap<UniqId, TreeIndex>,           //UniqIdStore
     /// Nonce for income_tables. This is the unique identifier for an NFT
     pub tree_index: TreeIndex,
+    /// List of failed transaction
+    pub failed_transactions: UnorderedMap<u64, FailedTransaction>,
+    /// Failed transaction nonce
+    pub failed_nonce: u64,
 }
 
 #[near_bindgen]
@@ -129,6 +137,8 @@ impl Contract {
             income_tables: TreeMap::new(StorageKeys::IncomeTables),
             uniq_id_to_tree_index: UnorderedMap::new(StorageKeys::UniqueIdToTreeIndex),
             tree_index: 0,
+            failed_transactions: UnorderedMap::new(StorageKeys::FailedTransactions),
+            failed_nonce: 0
         };
         internal_set_factory_info(&FactoryInfo {
             factory_id: env::predecessor_account_id(),
@@ -220,6 +230,29 @@ impl Contract {
 
         log!("MintRootCallback exiting, empty entry was inserted for the new song.");
     }    
+
+    /// TEST Callback for Payout (one single transfer)
+    #[private]
+    pub fn transfer_callback(
+        &mut self, 
+        #[callback_result] result: Result<(), near_sdk::PromiseError>,
+        beneficiary: AccountId,
+        amount: U128
+    ) {
+        if result.is_err() {
+            log!("WARNING! This transfer failed: {} - {:?}", beneficiary, amount);
+            
+            let failed_transaction_details = FailedTransaction {
+                beneficiary: beneficiary,
+                amount: u128::from(amount.clone())
+            };
+
+            self.failed_transactions.insert(&self.failed_nonce, &failed_transaction_details);
+            self.failed_nonce = self.failed_nonce + 1;
+        } else {
+            log!("Transfering {:?} yoctoNEAR to {} was successful!", amount, beneficiary);
+        }
+    }
 }
 
 /// Stores attached data into blob store and returns hash of it.

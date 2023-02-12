@@ -188,6 +188,16 @@ impl Contract {
         self.tree_index
     }
 
+    /// List income tables, with possible limit
+    pub fn get_failed_transactions(&self, from_index: u64, limit: u64) -> Vec<(u64, FailedTransaction)> {
+        let failed_transactions_as_vec = self.failed_transactions.to_vec();
+
+        let start: usize = from_index as usize;
+        let end: usize = min(self.failed_transactions.len(), from_index + limit) as usize;
+
+        failed_transactions_as_vec[start .. end].to_vec()
+    }
+
     /// Get specific proposal.
     pub fn get_proposal(&self, id: u64) -> ProposalOutput {
         let proposal = self.proposals.get(&id).expect("ERR_NO_PROPOSAL");

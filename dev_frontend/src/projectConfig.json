@@ -1,5 +1,6 @@
 {
-  "test": "MotherContractTest-Quorum-Test",
-  "contractName": "mother-contract-test-8.soundsplash.testnet",
-  "oldcontractName": "mother-contract-test-7.soundsplash.testnet"
+  "test": "MotherContractTest-FailedTransactions",
+  "contractName": "mother-contract-test-9.soundsplash.testnet",
+  "old-8-contractName": "mother-contract-test-8.soundsplash.testnet",
+  "old-7-contractName": "mother-contract-test-7.soundsplash.testnet"
 }

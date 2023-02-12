@@ -79,7 +79,7 @@ export default function TestPageOne() {
         <h2>Registration Proccess</h2>
 
         <section>
-          <p>{"!! We will divide the Registration procceess and the AddArtistToMasterGroup. !! First the User registers. Indeed, the User can not complete the registration proccess, it is done by us, members of the Council / Admins."}</p>
+          <p>{"First the User registers. Indeed, the User can not complete the registration proccess, it is done by us, members of the Council / Admins."}</p>
           <p>{"The easiest thing would be to add the User to the correct Group (Role)."}</p>
           <p>{"For example, if we want to enable him to mint on "}<strong>nft.metajax.near</strong>{", we add him to "}<code>master_nft.metajax.near.</code></p>
           <p>{"If we want to add him with lower rights, we add him/her to "}<code>collab_nft.metajax.near.</code></p>

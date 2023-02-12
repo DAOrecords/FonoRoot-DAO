@@ -204,10 +204,9 @@ pub fn default_policy(council: Vec<AccountId>) -> Policy {
         default_vote_policy: VotePolicy {
             weight_kind: WeightKind::RoleWeight,
             quorum: U128(1),
-            threshold: WeightOrRatio::Ratio(0,100),
+            threshold: WeightOrRatio::Ratio(1,100_000),
         },
-        //proposal_bond: U128(10u128.pow(24)),
-        proposal_bond: U128(0),                                                 // We changed default proposal bond to 0, because only approved users (Artists) can add a proposal now.
+        proposal_bond: U128(0),                                                 // We changed default proposal bond to 0, because only approved users (Artists) can add a proposal now. Old value: U128(10u128.pow(24)
         proposal_period: U64::from(1_000_000_000 * 60 * 60 * 24 * 7),
         bounty_bond: U128(10u128.pow(24)),
         bounty_forgiveness_period: U64::from(1_000_000_000 * 60 * 60 * 24),

@@ -4,7 +4,7 @@ import { actOnProposal, getLastProposalId, getListOfAllInProgressNfts, getListOf
 
 
 export default function TestPageTwo() {
-  const [contract, setContract] = useState("child-contract-10 .soundsplash.testnet");
+  const [contract, setContract] = useState("child-contract-11.soundsplash.testnet");
   const [title, setTitle] = useState("Smiling Sun");
   const [desc, setDesc] = useState("NFT about a smiling Sun");
   const [imageCID, setImageCID] = useState("QmerincKVRPTXh1z41725mFNvGp31UBgfyms5xWi1taNuQ");

@@ -69,7 +69,7 @@ export async function initContract() {
   window.accountId = window.walletConnection.getAccountId()                                // Getting the Account ID. If still unauthorized, it's just empty string
   
   window.contract = await new Contract(window.walletConnection.account(), nearConfig.contractName, {
-    viewMethods: ["get_policy", "get_last_proposal_id", "get_proposals", "get_in_progress_nfts", "get_catalogue", "get_single_income_table", "get_income_tables"],
+    viewMethods: ["get_policy", "get_last_proposal_id", "get_proposals", "get_in_progress_nfts", "get_catalogue", "get_single_income_table", "get_income_tables", "get_failed_transactions"],
     changeMethods: ["add_proposal", "act_proposal", "buy_nft", "get_price"],
   })
 }
@@ -424,6 +424,54 @@ export async function getListOfIncomeTables(from = 0, limit = 999999999) {
     .catch((err) => console.error(`There was an error while trying to get the list of IncomeTables, from: ${from}, limit: ${limit}, `, err));
 
     return incomeTableList;
+}
+
+// Get list of FailedTransactions
+export async function getListOfFailedTransactions(from = 0, limit = 999999999) {
+  let failedTransactionList = [];
+
+  const args = {
+    "from_index": from,
+    "limit": limit
+  }
+
+  await window.contract.get_failed_transactions(args)
+    .then((response) => {
+      console.log("Successfully got the list of FailedTransactions ", response);
+      failedTransactionList = response;
+    })
+    .catch((err) => console.error(`There was an error while trying to get the list of FailedTransactions, from: ${from}, limit: ${limit}, `, err));
+
+    return failedTransactionList;
+}
+
+// Resend transaction with different address
+export async function resendFailedTransaction(failedId, newAddress) {
+  let proposalId = false;
+
+  const args = {
+    proposal: {
+      description: `Resend transaction with different address, ID: ${failedId}`,
+      kind: {
+        ResendFailedTransaction: {
+          failed_id: failedId,
+          new_address: newAddress
+        }
+      }
+    }
+  };
+
+  const gas = 100000000000000;
+  const amount = utils.format.parseNearAmount("0");
+
+  await window.contract.add_proposal(args, gas, amount)
+    .then((msg) => {
+      console.log("Success! (Resend Failed Transaction)", msg);
+      proposalId = msg;
+    })
+    .catch((err) => console.error(`There was an error while trying to resend failed transaction. ID: ${failedId}`, err));
+
+  return proposalId;
 }
 
 // Get list of all InProgress NFTs

@@ -13,6 +13,7 @@ import CreateGroup from './Pages/CreateGroup';
 import Buy from './Pages/Buy';
 import IncomeTables from './Pages/IncomeTables';
 import Payout from './Pages/Payout';
+import FailedTransactions from './Pages/FailedTransactions';
 
 
 export default function App() {
@@ -113,6 +114,13 @@ export default function App() {
           path='/payout'
           element={
             <Payout />
+          }
+        /> 
+        <Route 
+          exact
+          path='/failed_transactions'
+          element={
+            <FailedTransactions />
           }
         /> 
 

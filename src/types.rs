@@ -4,6 +4,7 @@ use near_sdk::serde::{Deserialize, Serialize};
 use near_sdk::{AccountId, Balance, Gas, log};
 use near_sdk::collections::{UnorderedMap};
 use std::collections::HashMap;
+use std::ops::Deref;
 use regex::Regex;
 
 /// Account ID used for $NEAR in near-sdk v3.
@@ -221,6 +222,14 @@ pub struct Payout {
     pub payout: HashMap<AccountId, U128>,
 } 
 
+/// Failed Transaction object
+#[derive(BorshSerialize, BorshDeserialize, Serialize, Deserialize, Clone, Debug)]
+#[serde(crate = "near_sdk::serde")]
+pub struct FailedTransaction {
+    pub beneficiary: AccountId,
+    pub amount: Balance
+}
+
 /// Return value of `mint_root`, from Fono-Root minting contract
 #[derive(BorshSerialize, BorshDeserialize, Serialize, Deserialize, Clone, Debug)]
 #[serde(crate = "near_sdk::serde")]
@@ -256,6 +265,13 @@ impl IntoIterator for RevenueTable {
 
     fn into_iter(self) -> Self::IntoIter {
         self.0.into_iter()
+    }
+}
+impl Deref for RevenueTable {
+    type Target = HashMap<AccountId, u64>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
     }
 }
 

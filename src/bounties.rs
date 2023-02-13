@@ -219,7 +219,7 @@ mod tests {
     use super::*;
 
     fn add_bounty(context: &mut VMContextBuilder, contract: &mut Contract, times: u32) -> u64 {
-        testing_env!(context.attached_deposit(to_yocto("1")).build());
+        testing_env!(context.attached_deposit(to_yocto("0")).build());
         let id = contract.add_proposal(ProposalInput {
             description: "test".to_string(),
             kind: ProposalKind::AddBounty {

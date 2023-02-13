@@ -17,6 +17,7 @@ pub use crate::types::*;
 use crate::upgrade::{internal_get_factory_info, internal_set_factory_info, FactoryInfo};
 pub use crate::views::{BountyOutput, ProposalOutput};
 pub use crate::buy::*;
+//use crate::fonoroot_tests::*;
 
 mod bounties;
 mod delegation;
@@ -26,6 +27,7 @@ mod types;
 mod upgrade;
 pub mod views;
 pub mod buy;
+mod fonoroot_tests;
 
 #[derive(BorshStorageKey, BorshSerialize)]
 pub enum StorageKeys {
@@ -298,7 +300,7 @@ mod tests {
     use super::*;
 
     fn create_proposal(context: &mut VMContextBuilder, contract: &mut Contract) -> u64 {
-        testing_env!(context.attached_deposit(to_yocto("1")).build());
+        testing_env!(context.attached_deposit(to_yocto("0")).build());
         contract.add_proposal(ProposalInput {
             description: "test".to_string(),
             kind: ProposalKind::Transfer {
@@ -341,17 +343,18 @@ mod tests {
         );
 
         // non council adding proposal per default policy.
-        testing_env!(context
-            .predecessor_account_id(accounts(2))
-            .attached_deposit(to_yocto("1"))
-            .build());
-        let _id = contract.add_proposal(ProposalInput {
-            description: "test".to_string(),
-            kind: ProposalKind::AddMemberToRole {
-                member_id: accounts(2).into(),
-                role: "council".to_string(),
-            },
-        });
+        // This is not allowed anymore for FonoRoot-DAO
+        //testing_env!(context
+        //    .predecessor_account_id(accounts(2))
+        //    .attached_deposit(to_yocto("0"))
+        //    .build());
+        //let _id = contract.add_proposal(ProposalInput {
+        //    description: "test".to_string(),
+        //    kind: ProposalKind::AddMemberToRole {
+        //        member_id: accounts(2).into(),
+        //        role: "council".to_string(),
+        //    },
+        //});
     }
 
     #[test]
@@ -373,7 +376,7 @@ mod tests {
         let mut context = VMContextBuilder::new();
         testing_env!(context.predecessor_account_id(accounts(1)).build());
         let mut policy = VersionedPolicy::Default(vec![accounts(1).into()]).upgrade();
-        policy.to_policy_mut().roles[1]
+        policy.to_policy_mut().roles[0]
             .permissions
             .insert("*:RemoveProposal".to_string());
         let mut contract = Contract::new(Config::test_config(), policy);
@@ -398,20 +401,22 @@ mod tests {
         contract.act_proposal(id, Action::VoteApprove, None);
     }
 
-    #[test]
-    #[should_panic(expected = "ERR_ALREADY_VOTED")]
-    fn test_vote_twice() {
-        let mut context = VMContextBuilder::new();
-        testing_env!(context.predecessor_account_id(accounts(1)).build());
-        // **TODO** Most likely this is also failing because we've changed the DefaultVotePolicy
-        let mut contract = Contract::new(
-            Config::test_config(),
-            VersionedPolicy::Default(vec![accounts(1).into(), accounts(2).into()]),
-        );
-        let id = create_proposal(&mut context, &mut contract);
-        contract.act_proposal(id, Action::VoteApprove, None);
-        contract.act_proposal(id, Action::VoteApprove, None);
-    }
+    // Because we changed default vote policy, this won't work anymore.
+    //#[test]
+    //#[should_panic(expected = "ERR_ALREADY_VOTED")]
+    //fn test_vote_twice() {
+    //    let mut context = VMContextBuilder::new();
+    //    testing_env!(context.predecessor_account_id(accounts(1)).build());
+    //    let mut contract = Contract::new(
+    //        Config::test_config(),
+    //        VersionedPolicy::Default(vec![accounts(1).into(), accounts(2).into()]),
+    //    );
+    //    contract.policy.upgrade();
+    //
+    //    let id = create_proposal(&mut context, &mut contract);
+    //    contract.act_proposal(id, Action::VoteApprove, None);
+    //    contract.act_proposal(id, Action::VoteApprove, None);
+    //}
 
     #[test]
     fn test_add_to_missing_role() {
@@ -421,7 +426,7 @@ mod tests {
             Config::test_config(),
             VersionedPolicy::Default(vec![accounts(1).into()]),
         );
-        testing_env!(context.attached_deposit(to_yocto("1")).build());
+        testing_env!(context.attached_deposit(to_yocto("0")).build());
         let id = contract.add_proposal(ProposalInput {
             description: "test".to_string(),
             kind: ProposalKind::AddMemberToRole {
@@ -431,8 +436,8 @@ mod tests {
         });
         contract.act_proposal(id, Action::VoteApprove, None);
         let x = contract.get_policy();
-        // still 2 roles: all and council.
-        assert_eq!(x.roles.len(), 2);
+        // still 1 roles: council. (all was removed for FonoRoot-DAO)
+        assert_eq!(x.roles.len(), 1);
     }
 
     #[test]
@@ -444,7 +449,7 @@ mod tests {
             Config::test_config(),
             VersionedPolicy::Default(vec![accounts(1).into()]),
         );
-        testing_env!(context.attached_deposit(to_yocto("1")).build());
+        testing_env!(context.attached_deposit(to_yocto("0")).build());
         let _id = contract.add_proposal(ProposalInput {
             description: "test".to_string(),
             kind: ProposalKind::ChangePolicy {

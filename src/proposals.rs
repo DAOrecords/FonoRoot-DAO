@@ -118,8 +118,8 @@ pub enum ProposalKind {
     ChangePolicyUpdateParameters { parameters: PolicyParameters },
     /// MintRoot will do a cross-contract-call to do FonoRoot minting contract. Data has to be ready at this point.
     MintRoot { id: u64 },
-    /// PrepairNft will create an InProgressMetadata object, that can be half-ready.
-    PrepairNft { nft_data: NftDataFromFrontEnd },
+    /// PrepareNft will create an InProgressMetadata object, that can be half-ready.
+    PrepareNft { nft_data: NftDataFromFrontEnd },
     /// The user can update values for already existing InProgressMetadata object, still does not need to be ready for mint
     UpdatePrepairedNft { id: u64, new_nft_data: NftDataFromFrontEnd },
     /// Create a RevenueTable for a song that was already minted (NFT has to exist at this point)
@@ -159,7 +159,7 @@ impl ProposalKind {
             ProposalKind::ChangePolicyUpdateParameters { .. } => "policy_update_parameters",
             // The below proposals are part of FonoRoot-DAO
             ProposalKind::MintRoot { .. } => "mint_root",
-            ProposalKind::PrepairNft { .. } => "prepair_nft",
+            ProposalKind::PrepareNft { .. } => "prepair_nft",
             ProposalKind::UpdatePrepairedNft { .. } => "update_prepaired_nft",
             ProposalKind::CreateRevenueTable { .. } => "create_revenue_table",
             ProposalKind::AlterRevenueTable { .. }  => "alter_revenue_table",
@@ -508,7 +508,7 @@ impl Contract {
                 log!("Initiating cross-contract call! Function inside DAO contract exiting...");
                 promise.into()
             }
-            ProposalKind::PrepairNft { nft_data } => {
+            ProposalKind::PrepareNft { nft_data } => {
                 self.assert_artist_can_mint(nft_data.contract.clone());                     // Artist needs to be member of the master group of the minting contract
 
                 if nft_data.image_cid.is_some()  {                                          // Assertations about the existence of the hash values, for each CID

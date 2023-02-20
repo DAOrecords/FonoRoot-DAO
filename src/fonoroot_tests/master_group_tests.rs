@@ -2,14 +2,11 @@ use near_sdk::test_utils::{accounts, VMContextBuilder};
 pub use near_sdk::json_types::{Base64VecU8, U128};
 use std::collections::{HashSet};
 use near_sdk::{testing_env};
-//use near_sdk_sim::to_yocto;
 use crate::fonoroot_tests::helpers::{create_master_group_proposal, add_member_to_master_proposal, remove_member_from_master_proposal};
-//use crate::proposals::{};
 use crate::policy::{VersionedPolicy, RoleKind};
 use crate::types::{Action};
 use crate::Contract;
 use crate::Config;
-
 
 
 #[test]
@@ -62,6 +59,7 @@ fn master_group_parameters_are_correct() {
     assert_eq!(zero_member, policy.roles[1].kind, "The group should contain 0 members.");
 }
 
+/// This is the registration process
 #[test]
 fn master_group_member_tests() {
     let mut context = VMContextBuilder::new();
@@ -90,6 +88,7 @@ fn master_group_member_tests() {
     assert_eq!(zero_member, policy.roles[1].kind, "The group should contain 0 members after Alice was removed.");
 }
 
+/// This will remove all users from the group / unregister them
 #[test]
 fn master_group_reset_test() {
     let mut context = VMContextBuilder::new();

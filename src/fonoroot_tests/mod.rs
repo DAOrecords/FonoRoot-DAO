@@ -1,7 +1,15 @@
 #[cfg(test)]
-mod mint_root_tests;
+mod master_group_tests;
+
 #[cfg(test)]
-mod create_master_tests;
+mod prepare_data_tests;
+
+#[cfg(test)]
+mod update_data_tests;
+
+#[cfg(test)]
+mod mint_root_tests;
+
 #[cfg(test)]
 mod helpers;
 

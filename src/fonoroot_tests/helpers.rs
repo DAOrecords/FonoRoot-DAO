@@ -64,7 +64,7 @@ pub fn remove_member_from_master_proposal(context: &mut VMContextBuilder, contra
 }
 
 /// This will add an InProgressNft to the list that is ready to be minted.
-pub fn prepare_nft_add_proposal(context: &mut VMContextBuilder, contract: &mut Contract) -> u64 {
+pub fn prepare_nft_full_proposal(context: &mut VMContextBuilder, contract: &mut Contract) -> u64 {
     testing_env!(context.attached_deposit(to_yocto("0")).build());
     contract.add_proposal(ProposalInput {
         description: "Prepare NFT".to_string(),
@@ -81,6 +81,75 @@ pub fn prepare_nft_add_proposal(context: &mut VMContextBuilder, contract: &mut C
                 animation_url_hash: Some(Base64VecU8(vec![7,8,9])),
                 meta_json_cid: Some("QmeCBSWQcDwn3ktKdEfDn68bt2PQbx3khyqGQAeYAVUHpb".to_string()),
                 meta_json_hash: Some(Base64VecU8(vec![10,11,12])),
+            }
+        },
+    })
+}
+
+/// This will try to add a bad InProgressNft, where there is image, but no hash for image.
+pub fn prepare_nft_image_hash_missing_proposal(context: &mut VMContextBuilder, contract: &mut Contract) -> u64 {
+    testing_env!(context.attached_deposit(to_yocto("0")).build());
+    contract.add_proposal(ProposalInput {
+        description: "Prepare NFT".to_string(),
+        kind: ProposalKind::PrepareNft {
+            nft_data: NftDataFromFrontEnd {
+                contract: AccountId::new_unchecked("minting-contract-1.near".to_string()),
+                title: Some("Test NFT".to_string()),
+                desc: Some("Description about a Test NFT".to_string()),
+                image_cid: Some("QmerincKVRPTXh1z41725mFNvGp31UBgfyms5xWi1taNuQ".to_string()),
+                image_hash: None,
+                music_folder_cid: Some("QmU51uX3B44Z4pH2XimaJ6eScRgAzG4XUrKfsz1yWVCo6f".to_string()),
+                music_folder_hash: Some(Base64VecU8(vec![4,5,6])),
+                animation_url: Some("https://ipfs.io/ipfs/QmU51uX3B44Z4pH2XimaJ6eScRgAzG4XUrKfsz1yWVCo6f".to_string()),
+                animation_url_hash: Some(Base64VecU8(vec![7,8,9])),
+                meta_json_cid: Some("QmeCBSWQcDwn3ktKdEfDn68bt2PQbx3khyqGQAeYAVUHpb".to_string()),
+                meta_json_hash: Some(Base64VecU8(vec![10,11,12])),
+            }
+        },
+    })
+}
+
+/// This will try to add a bad InProgressNft, where there is meta, but no hash for meta.
+pub fn prepare_nft_meta_hash_missing_proposal(context: &mut VMContextBuilder, contract: &mut Contract) -> u64 {
+    testing_env!(context.attached_deposit(to_yocto("0")).build());
+    contract.add_proposal(ProposalInput {
+        description: "Prepare NFT".to_string(),
+        kind: ProposalKind::PrepareNft {
+            nft_data: NftDataFromFrontEnd {
+                contract: AccountId::new_unchecked("minting-contract-1.near".to_string()),
+                title: Some("Test NFT".to_string()),
+                desc: Some("Description about a Test NFT".to_string()),
+                image_cid: Some("QmerincKVRPTXh1z41725mFNvGp31UBgfyms5xWi1taNuQ".to_string()),
+                image_hash: Some(Base64VecU8(vec![1,2,3])),
+                music_folder_cid: Some("QmU51uX3B44Z4pH2XimaJ6eScRgAzG4XUrKfsz1yWVCo6f".to_string()),
+                music_folder_hash: Some(Base64VecU8(vec![4,5,6])),
+                animation_url: Some("https://ipfs.io/ipfs/QmU51uX3B44Z4pH2XimaJ6eScRgAzG4XUrKfsz1yWVCo6f".to_string()),
+                animation_url_hash: Some(Base64VecU8(vec![7,8,9])),
+                meta_json_cid: Some("QmeCBSWQcDwn3ktKdEfDn68bt2PQbx3khyqGQAeYAVUHpb".to_string()),
+                meta_json_hash: None,
+            }
+        },
+    })
+}
+
+/// This will add an InProgressNft to the list that is not ready to be minted, it is half-ready
+pub fn prepare_nft_half_ready_proposal(context: &mut VMContextBuilder, contract: &mut Contract) -> u64 {
+    testing_env!(context.attached_deposit(to_yocto("0")).build());
+    contract.add_proposal(ProposalInput {
+        description: "Prepare NFT".to_string(),
+        kind: ProposalKind::PrepareNft {
+            nft_data: NftDataFromFrontEnd {
+                contract: AccountId::new_unchecked("minting-contract-1.near".to_string()),
+                title: Some("Test NFT".to_string()),
+                desc: None,
+                image_cid: Some("QmerincKVRPTXh1z41725mFNvGp31UBgfyms5xWi1taNuQ".to_string()),
+                image_hash: Some(Base64VecU8(vec![1,2,3])),
+                music_folder_cid: Some("QmU51uX3B44Z4pH2XimaJ6eScRgAzG4XUrKfsz1yWVCo6f".to_string()),
+                music_folder_hash: Some(Base64VecU8(vec![4,5,6])),
+                animation_url: Some("https://ipfs.io/ipfs/QmU51uX3B44Z4pH2XimaJ6eScRgAzG4XUrKfsz1yWVCo6f".to_string()),
+                animation_url_hash: Some(Base64VecU8(vec![7,8,9])),
+                meta_json_cid: None,
+                meta_json_hash: None,
             }
         },
     })

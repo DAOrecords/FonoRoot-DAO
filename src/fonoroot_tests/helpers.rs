@@ -155,6 +155,78 @@ pub fn prepare_nft_half_ready_proposal(context: &mut VMContextBuilder, contract:
     })
 }
 
+/// This will update an InProgressNft with the below data. After this, the NFT will be ready to be minted.
+pub fn update_nft_full_proposal(context: &mut VMContextBuilder, contract: &mut Contract, id: u64) -> u64 {
+    testing_env!(context.attached_deposit(to_yocto("0")).build());
+    contract.add_proposal(ProposalInput {
+        description: "Update prepared NFT (will be ready after this)".to_string(),
+        kind: ProposalKind::UpdatePrepairedNft {
+            id: id,
+            new_nft_data: NftDataFromFrontEnd {
+                contract: AccountId::new_unchecked("minting-contract-1.near".to_string()),
+                title: Some("Test NFT".to_string()),
+                desc: Some("Description of the updated NFT".to_string()),
+                image_cid: Some("QmerincKVRPTXh1z41725mFNvGp31UBgfyms5xWi1taNuQ".to_string()),
+                image_hash: Some(Base64VecU8(vec![1,2,3])),
+                music_folder_cid: Some("QmU51uX3B44Z4pH2XimaJ6eScRgAzG4XUrKfsz1yWVCo6f".to_string()),
+                music_folder_hash: Some(Base64VecU8(vec![4,5,6])),
+                animation_url: Some("https://ipfs.io/ipfs/QmU51uX3B44Z4pH2XimaJ6eScRgAzG4XUrKfsz1yWVCo6f".to_string()),
+                animation_url_hash: Some(Base64VecU8(vec![7,8,9])),
+                meta_json_cid: Some("QmxCBSWQcDwn3ktKdEfDn68bt2PQbx3khyqGQAeYAVabcd".to_string()),
+                meta_json_hash: Some(Base64VecU8(vec![15,16,17])),
+            }
+        },
+    })
+}
+
+/// This will try to update an InProgressNft, but the data is not good, music_folder_hash is missing.
+pub fn update_nft_music_hash_missing_proposal(context: &mut VMContextBuilder, contract: &mut Contract, id: u64) -> u64 {
+    testing_env!(context.attached_deposit(to_yocto("0")).build());
+    contract.add_proposal(ProposalInput {
+        description: "Update prepared NFT (will be ready after this)".to_string(),
+        kind: ProposalKind::UpdatePrepairedNft {
+            id: id,
+            new_nft_data: NftDataFromFrontEnd {
+                contract: AccountId::new_unchecked("minting-contract-1.near".to_string()),
+                title: Some("Test NFT".to_string()),
+                desc: Some("Description of the updated NFT".to_string()),
+                image_cid: Some("QmerincKVRPTXh1z41725mFNvGp31UBgfyms5xWi1taNuQ".to_string()),
+                image_hash: Some(Base64VecU8(vec![1,2,3])),
+                music_folder_cid: Some("QmU51uX3B44Z4pH2XimaJ6eScRgAzG4XUrKfsz1yWVCo6f".to_string()),
+                music_folder_hash: None,
+                animation_url: Some("https://ipfs.io/ipfs/QmU51uX3B44Z4pH2XimaJ6eScRgAzG4XUrKfsz1yWVCo6f".to_string()),
+                animation_url_hash: Some(Base64VecU8(vec![7,8,9])),
+                meta_json_cid: Some("QmxCBSWQcDwn3ktKdEfDn68bt2PQbx3khyqGQAeYAVabcd".to_string()),
+                meta_json_hash: Some(Base64VecU8(vec![15,16,17])),
+            }
+        },
+    })
+}
+
+/// This will update an InProgressNft with the below data. After this, the NFT still won't be ready to be minted, some data is missing.
+pub fn update_nft_half_ready_proposal(context: &mut VMContextBuilder, contract: &mut Contract, id: u64) -> u64 {
+    testing_env!(context.attached_deposit(to_yocto("0")).build());
+    contract.add_proposal(ProposalInput {
+        description: "Update prepared NFT (will be ready after this)".to_string(),
+        kind: ProposalKind::UpdatePrepairedNft {
+            id: id,
+            new_nft_data: NftDataFromFrontEnd {
+                contract: AccountId::new_unchecked("minting-contract-1.near".to_string()),
+                title: Some("Test NFT".to_string()),
+                desc: Some("Description of the updated NFT".to_string()),
+                image_cid: Some("QmerincKVRPTXh1z41725mFNvGp31UBgfyms5xWi1taNuQ".to_string()),
+                image_hash: Some(Base64VecU8(vec![1,2,3])),
+                music_folder_cid: Some("QmU51uX3B44Z4pH2XimaJ6eScRgAzG4XUrKfsz1yWVCo6f".to_string()),
+                music_folder_hash: Some(Base64VecU8(vec![4,5,6])),
+                animation_url: Some("https://ipfs.io/ipfs/QmU51uX3B44Z4pH2XimaJ6eScRgAzG4XUrKfsz1yWVCo6f".to_string()),
+                animation_url_hash: Some(Base64VecU8(vec![7,8,9])),
+                meta_json_cid: None,
+                meta_json_hash: None,
+            }
+        },
+    })
+}
+
 /// This will mint the NFT that was previously prepared by prepare_nft_add_proposal
 pub fn mint_root_add_proposal(context: &mut VMContextBuilder, contract: &mut Contract) -> u64 {
     log!("hello world.");

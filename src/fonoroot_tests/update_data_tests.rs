@@ -159,7 +159,7 @@ fn update_prepared_wrong_id() {
 
 /// This should fail, because Bob is not owner, even though he is member of the master group
 #[test]
-#[should_panic]
+#[should_panic(expected = "You can only update prepared NFTs that you originally created!")]
 fn update_prepared_not_owner_error() {
     let mut context = VMContextBuilder::new();
     testing_env!(context.predecessor_account_id(accounts(1)).build());                          // This is Bob

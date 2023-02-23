@@ -553,7 +553,7 @@ impl Contract {
                 assert_eq!(                                                                // By this we also make sure that the user can't insert an item into the 
                     &old_data.artist,                                                      // LookUpMap to an arbitrary position, for example, after the nonce
                     &env::predecessor_account_id(),
-                    "You can only update prepaired NFTs that you originally created!"
+                    "You can only update prepared NFTs that you originally created!"
                 );
 
                 if new_nft_data.image_cid.is_some()  {                                      // Assertations about the existence of the hash values, for each CID

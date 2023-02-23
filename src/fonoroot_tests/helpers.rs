@@ -1,6 +1,6 @@
 use std::collections::{HashMap};
 use near_sdk::test_utils::{VMContextBuilder};
-use near_sdk::{log, AccountId};
+use near_sdk::{AccountId};
 pub use near_sdk::json_types::{Base64VecU8};
 use near_sdk::testing_env;
 use near_sdk_sim::to_yocto;
@@ -228,13 +228,12 @@ pub fn update_nft_half_ready_proposal(context: &mut VMContextBuilder, contract: 
 }
 
 /// This will mint the NFT that was previously prepared by prepare_nft_add_proposal
-pub fn mint_root_add_proposal(context: &mut VMContextBuilder, contract: &mut Contract) -> u64 {
-    log!("hello world.");
+pub fn mint_root_proposal(context: &mut VMContextBuilder, contract: &mut Contract, id: u64) -> u64 {
     testing_env!(context.attached_deposit(to_yocto("0")).build());
     contract.add_proposal(ProposalInput {
         description: "Mint Root NFT".to_string(),
         kind: ProposalKind::MintRoot {
-            id: 0
+            id: id
         },
     })
 }

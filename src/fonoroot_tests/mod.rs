@@ -11,24 +11,10 @@ mod update_data_tests;
 mod mint_root_tests;
 
 #[cfg(test)]
-mod helpers;
-
-
-/* Here we could have tests in ::root, or we could create modules here as well, but then we would need to do imports
-#[test]
-fn test_something() {
-    assert_eq!(2,2, "Two should be two");
-}
-
+mod create_revenue_tests;
 
 #[cfg(test)]
-mod main {
-    use near_sdk::test_utils::accounts;
+mod alter_revenue_tests;
 
-    use super::*;
-
-    #[test]
-    fn test_something() {
-        assert_eq!(5,5, "Five should be Five");
-    }
-}*/
+#[cfg(test)]
+mod helpers;

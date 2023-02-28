@@ -6,7 +6,7 @@ use near_sdk::testing_env;
 use near_sdk_sim::to_yocto;
 use crate::proposals::{ProposalInput, ProposalKind};
 use crate::policy::{RoleKind, RolePermission};
-use crate::types::{NftDataFromFrontEnd};
+use crate::types::{NftDataFromFrontEnd, TokenId, SalePriceInYoctoNear};
 use crate::Contract;
 
 
@@ -235,5 +235,19 @@ pub fn mint_root_proposal(context: &mut VMContextBuilder, contract: &mut Contrac
         kind: ProposalKind::MintRoot {
             id: id
         },
+    })
+}
+
+/// This will add a RevenueTable to an already minted NFT
+pub fn add_revenue_table_proposal(context: &mut VMContextBuilder, contract: &mut Contract, root_id: TokenId,  minting_contract: AccountId, unsafe_table: HashMap<AccountId, u64>, price: SalePriceInYoctoNear ) -> u64 {
+    testing_env!(context.attached_deposit(to_yocto("0")).build());
+    contract.add_proposal(ProposalInput {
+        description: "Create New Revenue Table".to_string(),
+        kind: ProposalKind::CreateRevenueTable {
+            root_id: root_id,
+            contract: minting_contract,
+            unsafe_table: unsafe_table,
+            price: price
+        }
     })
 }

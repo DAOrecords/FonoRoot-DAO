@@ -606,8 +606,8 @@ impl Contract {
                     env::signer_account_id(),
                     "Only the owner (Artist) can alter the revenue table!"
                 );
-                
-                if catalogue_for_caller.get(&tree_index).is_none() {                        // Update is not possible through this proposal
+            
+                if catalogue_for_caller.get(&tree_index).unwrap().is_some() {               // Update is not possible through this proposal
                     panic!("A Revenue Table already exists!");
                 }
                 

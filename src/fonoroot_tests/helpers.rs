@@ -251,3 +251,16 @@ pub fn add_revenue_table_proposal(context: &mut VMContextBuilder, contract: &mut
         }
     })
 }
+
+/// This will alter an existing RevenueTable
+pub fn alter_revenue_table_proposal(context: &mut VMContextBuilder, contract: &mut Contract, index: u64, table: HashMap<AccountId, u64>, price: SalePriceInYoctoNear) -> u64 {
+    testing_env!(context.attached_deposit(to_yocto("0")).build());
+    contract.add_proposal(ProposalInput {
+        description: "Alter the RevenueTable".to_string(),
+        kind: ProposalKind::AlterRevenueTable {
+            tree_index: index,
+            unsafe_table: table,
+            price: price
+        }
+    })
+}
